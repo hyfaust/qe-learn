@@ -168,45 +168,15 @@ body {
     justify-content: space-between;
 }
 
-.sidebar-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
 .github-link {
     color: var(--text-secondary);
     display: flex;
     align-items: center;
-    padding: 6px;
-    border-radius: var(--radius);
-    transition: color 0.2s, background 0.2s;
+    transition: color 0.2s;
 }
 
 .github-link:hover {
     color: var(--text-primary);
-    background: var(--bg-hover);
-}
-
-.github-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    margin: 12px 0;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    text-decoration: none;
-    transition: background 0.2s, color 0.2s, border-color 0.2s;
-}
-
-.github-badge:hover {
-    background: var(--bg-hover);
-    color: var(--text-primary);
-    border-color: var(--text-secondary);
 }
 
 .theme-toggle {
