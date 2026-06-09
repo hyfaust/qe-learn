@@ -168,6 +168,17 @@ body {
     justify-content: space-between;
 }
 
+.github-link {
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+}
+
+.github-link:hover {
+    color: var(--text-primary);
+}
+
 .theme-toggle {
     background: var(--bg-tertiary);
     border: 1px solid var(--border);
