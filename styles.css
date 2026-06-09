@@ -655,6 +655,20 @@ body {
 .katex-display {
     overflow-x: auto;
     margin: 16px 0;
+    max-width: 100%;
+}
+
+.katex {
+    overflow-x: visible;
+    overflow-y: visible;
+    max-width: 100%;
+    white-space: nowrap;
+}
+
+.markdown-body .katex-display {
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: 100%;
 }
 
 /* ===== Loading ===== */
