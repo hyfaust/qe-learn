@@ -179,6 +179,18 @@ body {
     color: var(--text-primary);
 }
 
+.github-title-link {
+    color: var(--text-secondary);
+    vertical-align: middle;
+    margin-left: 8px;
+    transition: color 0.2s;
+    text-decoration: none;
+}
+
+.github-title-link:hover {
+    color: var(--text-primary);
+}
+
 .theme-toggle {
     background: var(--bg-tertiary);
     border: 1px solid var(--border);
