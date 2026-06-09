@@ -1,0 +1,44 @@
+###############################################################################
+#  金刚石（C）— SCF 计算输入文件
+#  用于后续介电性质和 IR/Raman 光谱计算
+#
+#  物理背景：
+#    金刚石结构，fcc Bravais 格子，空间群 Fd-3m
+#    晶格常数 a = 6.74 Bohr (3.567 Å)
+#    使用超软赝势 C.pz-rrkjus.UPF
+###############################################################################
+
+&CONTROL
+  calculation  = 'scf'
+  prefix       = 'diamond'
+  pseudo_dir   = '/home/faust/qe-7.0/pseudo/'
+  outdir       = './tmp/'
+  tstress      = .TRUE.
+  tprnfor      = .TRUE.
+/
+
+&SYSTEM
+  ibrav     = 2              ! fcc 格子
+  celldm(1) = 6.74           ! 晶格参数 a (Bohr) ≈ 3.567 Å
+  nat       = 2              ! 2 个 C 原子（金刚石结构）
+  ntyp      = 1
+  ecutwfc   = 27.0           ! 波函数截断能 (Ry)
+  ecutrho   = 300.0          ! 电荷密度截断能 (Ry)，超软赝势需要较大值
+  occupations = 'fixed'      ! 绝缘体，固定占据
+/
+
+&ELECTRONS
+  conv_thr        = 1.0D-10  ! SCF 收敛阈值
+  mixing_beta     = 0.7
+  diagonalization = 'david'
+/
+
+ATOMIC_SPECIES
+  C  12.011  C.pz-rrkjus.UPF
+
+ATOMIC_POSITIONS {crystal}
+  C  0.00  0.00  0.00
+  C  0.25  0.25  0.25
+
+K_POINTS {automatic}
+  4  4  4  1  1  1

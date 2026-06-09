@@ -1,0 +1,53 @@
+&CONTROL
+  calculation  = 'cp'
+  restart_mode = 'from_scratch'
+  pseudo_dir   = '/home/faust/qe-7.0/pseudo/'
+  outdir       = './tmp/'
+  prefix       = 'si_cp'
+  dt           = 5.0D0
+  nstep        = 100
+  iprint       = 10
+  isave        = 100
+  ndr          = 51
+  ndw          = 51
+/
+
+&SYSTEM
+  ibrav     = 2
+  celldm(1) = 10.18
+  nat       = 2
+  ntyp      = 1
+  nbnd      = 8
+  ecutwfc   = 20.0
+  ecutrho   = 80.0          ! cp.x 要求 NC-PP 的 ecutrho = 4*ecutwfc
+/
+
+&ELECTRONS
+  emass            = 400.D0
+  emass_cutoff     = 2.5D0
+  electron_dynamics = 'verlet'
+  orthogonalization = 'ortho'
+  ortho_eps         = 5.D-8
+  ortho_max         = 100
+/
+
+&IONS
+  ion_dynamics    = 'verlet'
+  ion_temperature = 'nose'
+  tempw           = 300.D0
+  fnosep          = 6.6666D0
+  ion_radius(1)   = 1.0D0
+/
+
+&CELL
+  cell_dynamics = 'none'
+/
+
+ATOMIC_SPECIES
+ Si  28.086  Si.pz-vbc.UPF
+
+ATOMIC_POSITIONS { alat }
+ Si  0.00  0.00  0.00
+ Si  0.25  0.25  0.25
+
+K_POINTS { gamma }

@@ -1,0 +1,13 @@
+#------------------------------------------------------------------------------
+# hp.x 计算 NiO 的 Hubbard U 参数（线性响应方法）
+# 前提：先完成 nio_dftu_scf.in 的 SCF 计算（使用极小的 Hubbard_U = 1.d-8）
+# prefix 和 outdir 必须与 SCF 计算完全一致
+# 参考：QE HP/examples/example02/
+#------------------------------------------------------------------------------
+ &inputhp
+   prefix = 'nio_dftu'
+   outdir = './tmp/'
+   nq1 = 2, nq2 = 2, nq3 = 2,
+   conv_thr_chi = 1.0d-8,
+   iverbosity = 2
+ /

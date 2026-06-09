@@ -1,0 +1,272 @@
+<h1 id="_1">第八章：声子计算与晶格动力学</h1>
+<h2 id="1">1. 声子物理概念</h2>
+<h3 id="11">1.1 晶格振动与简正模式</h3>
+<p>晶体中的原子并非静止不动，而是围绕平衡位置做微小振动。当我们将原子位移展开为<strong>简正模式（normal modes）</strong> 时，每个模式以特定频率 $\omega$ 独立振荡。对于含 $N$ 个原子的原胞，共有 $3N$ 个简正模式（其中 3 个为声学支，对应整体平移）。</p>
+<blockquote>
+<p><strong>关键概念：声子</strong></p>
+<p><strong>声子（phonon）</strong> 是晶格振动的量子化描述。每个简正模式对应一种准粒子——声子，其能量为 $\hbar\omega$。声子是玻色子，遵循玻色-爱因斯坦统计，是理解固体热容、热导率、超导等性质的核心。</p>
+</blockquote>
+<h3 id="12">1.2 声子色散关系</h3>
+<p>声子频率随波矢 $\mathbf{q}$ 的变化关系 $\omega(\mathbf{q})$ 称为<strong>声子色散关系</strong>。色散关系包含了晶格动力学的全部信息：</p>
+<ul>
+<li><strong>声学支</strong>（acoustic）：$\omega \to 0$ 当 $\mathbf{q} \to 0$，描述原子同向运动</li>
+<li><strong>光学支</strong>（optical）：高频段，描述原子反向运动，在红外光谱中有响应</li>
+<li><strong>LO-TO 分裂</strong>：极性晶体中纵光学支（LO）与横光学支（TO）在 $\Gamma$ 点处的频率劈裂</li>
+</ul>
+<hr />
+<h2 id="2-dfpt">2. 密度泛函微扰理论（DFPT）原理</h2>
+<p>Quantum ESPRESSO 中的声子计算基于<strong>密度泛函微扰理论（Density Functional Perturbation Theory, DFPT）</strong>。其核心思想是：</p>
+<ol>
+<li>晶体处于平衡构型时，每个原子受力为零</li>
+<li>对原子位置施加无穷小位移（微扰），计算电子密度的线性响应</li>
+<li>由响应函数构建<strong>动力学矩阵（dynamical matrix）</strong></li>
+<li>对角化动力学矩阵得到声子频率</li>
+</ol>
+<p>DFPT 的优势在于：<br />
+- <strong>无需超胞</strong>：直接在原胞中计算任意 $\mathbf{q}$ 点的声子<br />
+- <strong>系统性收敛</strong>：精度完全由平面波截断能和 $\mathbf{k}$ 点网格决定<br />
+- <strong>可同时计算响应性质</strong>：介电常数、Born 有效电荷等</p>
+<hr />
+<h2 id="3">3. 完整声子色散计算流程</h2>
+<p>声子色散计算分为四个步骤：</p>
+<div class="codehilite"><pre><span></span><code>┌─────────────┐    ┌─────────────────┐    ┌──────────────┐    ┌───────────────┐
+│  Step 1:    │    │  Step 2:        │    │  Step 3:     │    │  Step 4:      │
+│  pw.x SCF   │───&gt;│  ph.x           │───&gt;│  q2r.x       │───&gt;│  matdyn.x     │
+│  自洽计算    │    │  多 q 点声子计算 │    │  傅里叶逆变换 │    │  色散曲线计算  │
+└─────────────┘    └─────────────────┘    └──────────────┘    └───────────────┘
+     电荷密度         D(q) 动力学矩阵       C(R) 实空间力常数      ω(q) 色散关系
+</code></pre></div>
+
+<h3 id="31-step-1scf-pwx">3.1 Step 1：SCF 自洽计算（pw.x）</h3>
+<p>首先进行标准的 SCF 计算，获得基态电荷密度。这一步的要点：</p>
+<ul>
+<li><code>prefix</code> 和 <code>outdir</code> 将在后续步骤中复用</li>
+<li>K 点网格需足够密以保证电荷密度收敛</li>
+<li>保存波函数和电荷密度供 ph.x 读取</li>
+</ul>
+<h3 id="32-step-2phx">3.2 Step 2：ph.x 声子计算</h3>
+<p>ph.x 在 SCF 电荷密度的基础上，计算指定 $\mathbf{q}$ 点处的动力学矩阵 $D(\mathbf{q})$。</p>
+<p><strong>关键参数</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tr2_ph</code></td>
+<td>自洽收敛阈值</td>
+<td>默认 1.0d-12；声子计算通常比 SCF 更严格，推荐 1.0d-14</td>
+</tr>
+<tr>
+<td><code>prefix</code></td>
+<td>计算前缀</td>
+<td><strong>必须与 SCF 计算完全一致</strong></td>
+</tr>
+<tr>
+<td><code>outdir</code></td>
+<td>输出目录</td>
+<td><strong>必须与 SCF 计算完全一致</strong></td>
+</tr>
+<tr>
+<td><code>amass(i)</code></td>
+<td>原子质量 (amu)</td>
+<td>可选，不指定则从赝势文件读取</td>
+</tr>
+<tr>
+<td><code>fildyn</code></td>
+<td>动力学矩阵输出文件名</td>
+<td>默认 <code>'matdyn'</code>；建议命名含 q 点信息</td>
+</tr>
+<tr>
+<td><code>epsil</code></td>
+<td>是否计算介电常数</td>
+<td>仅在 $\mathbf{q}=0$ 且为非金属时设为 <code>.true.</code></td>
+</tr>
+<tr>
+<td><code>trans</code></td>
+<td>是否计算声子</td>
+<td>默认 <code>.true.</code>；设为 <code>.false.</code> 则只计算介电性质</td>
+</tr>
+<tr>
+<td><code>ldisp</code></td>
+<td>是否计算 q 点网格</td>
+<td>设为 <code>.true.</code> 时配合 <code>nq1, nq2, nq3</code> 使用</td>
+</tr>
+</tbody>
+</table>
+<p><strong>q 点输入格式</strong>：在 <code>&amp;INPUTPH</code> namelist 之后，单独一行给出 $\mathbf{q}$ 点坐标（笛卡尔坐标，单位 $2\pi/a$）：</p>
+<div class="codehilite"><pre><span></span><code><span class="mf">0.0</span><span class="w">  </span><span class="mf">0.0</span><span class="w">  </span><span class="mf">0.0</span><span class="w">    </span><span class="err">#</span><span class="w"> </span><span class="n">Gamma</span><span class="w"> </span><span class="n">点</span>
+<span class="mf">1.0</span><span class="w">  </span><span class="mf">0.0</span><span class="w">  </span><span class="mf">0.0</span><span class="w">    </span><span class="err">#</span><span class="w"> </span><span class="n">X</span><span class="w"> </span><span class="n">点</span>
+</code></pre></div>
+
+<h3 id="33-step-3q2rx">3.3 Step 3：q2r.x 傅里叶逆变换</h3>
+<p>将 $\mathbf{q}$ 空间的动力学矩阵 $D(\mathbf{q})$ 通过傅里叶逆变换得到实空间力常数 $C(\mathbf{R})$。</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fildyn</code></td>
+<td>ph.x 输出的动力学矩阵文件名（含 <code>.0</code> 后缀的主文件）</td>
+</tr>
+<tr>
+<td><code>flfrc</code></td>
+<td>输出的实空间力常数文件</td>
+</tr>
+<tr>
+<td><code>zasr</code></td>
+<td>声学求和规则类型：<code>'no'</code>（不施加）、<code>'simple'</code>、<code>'crystal'</code>、<code>'zero-dim'</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>关键概念：声学求和规则（ASR）</strong></p>
+<p>声学求和规则要求零频声学模式在 $\mathbf{q}=0$ 时频率严格为零。数值误差会导致非零的"虚频"声学支，施加 ASR 可以修正这类误差。常用 <code>'crystal'</code> 或 <code>'simple'</code>。</p>
+</blockquote>
+<h3 id="34-step-4matdynx">3.4 Step 4：matdyn.x 计算色散曲线</h3>
+<p>利用实空间力常数，插值得到任意 $\mathbf{q}$ 点的声子频率，从而绘制完整的色散曲线。</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>flfrc</code></td>
+<td>q2r.x 输出的力常数文件</td>
+</tr>
+<tr>
+<td><code>q_in_band_form</code></td>
+<td><code>.true.</code> 时按高对称路径格式输入 q 点</td>
+</tr>
+<tr>
+<td><code>asr</code></td>
+<td>声学求和规则，与 q2r.x 中一致</td>
+</tr>
+<tr>
+<td><code>flfrq</code></td>
+<td>频率输出文件（默认 <code>'matdyn.freq'</code>）</td>
+</tr>
+<tr>
+<td><code>flvec</code></td>
+<td>振动模式输出文件（默认 <code>'matdyn.modes'</code>）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-gamma">4. Gamma 点声子的特殊性</h2>
+<p>$\Gamma$ 点（$\mathbf{q}=0$）是唯一可以在 SCF 计算后<strong>直接运行</strong> ph.x 的 $\mathbf{q}$ 点。原因在于 $\Gamma$ 点的波函数与 SCF 使用的 $\mathbf{k}$ 点网格完全重合，无需额外准备。</p>
+<p>对于其他 $\mathbf{q}$ 点（如 X、L 等），ph.x 需要读取 SCF 的电荷密度后自行进行非自洽计算，因此计算量更大，但<strong>无需手动运行 nscf 计算</strong>——ph.x 会自动处理。</p>
+<blockquote>
+<p><strong>注意</strong>：ph.x 运行后会覆盖 SCF 的波函数文件。如果后续还需要用到 SCF 的波函数，应在 ph.x 运行前备份 <code>outdir</code> 中的数据。</p>
+</blockquote>
+<hr />
+<h2 id="5-epsil-born">5. 介电性质计算：epsil 与 Born 有效电荷</h2>
+<p>在 $\Gamma$ 点声子计算中设置 <code>epsil=.true.</code> 可以额外计算：</p>
+<ul>
+<li><strong>电子介电常数张量</strong> $\varepsilon_\infty$：描述晶体对电场的电子响应</li>
+<li><strong>Born 有效电荷</strong> $Z^*$：描述原子位移引起的宏观极化变化</li>
+</ul>
+<p>这些量对于计算 LO-TO 分裂（极性光学声子在 $\Gamma$ 点的劈裂）至关重要。计算条件：</p>
+<ul>
+<li><strong>非金属体系</strong>（绝缘体或半导体）</li>
+<li><strong>仅限 $\mathbf{q}=0$</strong></li>
+<li><code>trans=.true.</code>（默认）且 <code>epsil=.true.</code> 时自动计算 Born 有效电荷</li>
+</ul>
+<hr />
+<h2 id="6">6. 动力学矩阵文件格式</h2>
+<p>ph.x 输出的动力学矩阵文件（如 <code>si.dynG</code>）包含：</p>
+<ul>
+<li>晶格信息（原胞矢量、原子位置、原子类型）</li>
+<li>$\mathbf{q}$ 点坐标</li>
+<li>动力学矩阵 $D_{\kappa\alpha,\kappa'\beta}(\mathbf{q})$ 的实部和虚部</li>
+<li>若计算了介电性质，还包含 $\varepsilon_\infty$ 和 $Z^*$</li>
+</ul>
+<p>文件结构示例（简化）：</p>
+<div class="codehilite"><pre><span></span><code>Dynamical matrix file
+... 晶格矢量 ...
+... 原子坐标 ...
+q = (  0.0000000  0.0000000  0.0000000 )
+   1    1   real part of dyn. matrix
+   ... 3x3 块 ...
+   1    1   imag part of dyn. matrix
+   ...
+</code></pre></div>
+
+<p>每个 $\mathbf{q}$ 点的矩阵维度为 $3N \times 3N$（$N$ 为原胞原子数）。</p>
+<hr />
+<h2 id="7">7. 声子计算的并行策略</h2>
+<p>声子计算中最高效的并行方式是 <strong>q 点并行</strong>：</p>
+<ul>
+<li>使用 <code>ph.x</code> 的 <code>-npool</code> 选项将不同的 $\mathbf{q}$ 点分配到不同进程组</li>
+<li>例如：<code>mpirun -np 16 ph.x -npool 4 &lt; input</code> 将 16 个进程分为 4 组，每组处理不同的 q 点</li>
+<li>使用 <code>ldisp=.true.</code> 时，所有不等价 q 点会自动分配</li>
+</ul>
+<p>其他并行层次：<br />
+- <strong>K 点并行</strong>（<code>-nk</code>）：在每个 q 点内部，k 点可以并行<br />
+- <strong>带并行</strong>（<code>-nb</code>）：不同能带的并行计算</p>
+<blockquote>
+<p><strong>性能提示</strong>：对于声子色散计算，q 点数量通常远大于 k 点数量，因此 <code>-npool</code> 是最有效的并行策略。</p>
+</blockquote>
+<hr />
+<h2 id="8-tr2_ph">8. tr2_ph 收敛阈值</h2>
+<p><code>tr2_ph</code> 控制 ph.x 内部自洽循环的收敛精度，类似于 pw.x 中的 <code>conv_thr</code>。</p>
+<table>
+<thead>
+<tr>
+<th>tr2_ph</th>
+<th>精度等级</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.0d-10</td>
+<td>粗略</td>
+<td>快速测试、初步探索</td>
+</tr>
+<tr>
+<td>1.0d-12</td>
+<td>标准</td>
+<td>常规声子计算（默认值）</td>
+</tr>
+<tr>
+<td>1.0d-14</td>
+<td>高精度</td>
+<td>本教程推荐值；介电性质计算</td>
+</tr>
+<tr>
+<td>1.0d-16</td>
+<td>极高精度</td>
+<td>需要极高数值精度的特殊场景</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>注意</strong>：过松的 <code>tr2_ph</code> 会导致声子频率不准确，尤其是低频声学支可能偏离零频较大。</p>
+</blockquote>
+<hr />
+<h2 id="9">9. 运行本章示例</h2>
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>chapters/08_phonon_basics
+bash<span class="w"> </span>scripts/phonon_workflow.sh<span class="w"> </span>pw.x<span class="w"> </span>ph.x<span class="w"> </span>q2r.x<span class="w"> </span>matdyn.x<span class="w"> </span>dynmat.x
+</code></pre></div>
+
+<p>预期结果：Si 在 $\Gamma$ 点的光学声子频率约为 <strong>520 cm⁻¹</strong>（TO 模式），声子色散曲线在 X 点处光学支频率约为 <strong>410–460 cm⁻¹</strong>。</p>
+<hr />
+<h2 id="_2">本章练习</h2>
+<ol>
+<li>修改 <code>tr2_ph</code>（1.0d-10、1.0d-12、1.0d-14），比较 $\Gamma$ 点声子频率的变化</li>
+<li>增大 q 点网格密度（如 6×6×6 → 8×8×8），观察色散曲线平滑度的变化</li>
+<li>尝试对 GaAs 等极性材料计算 <code>epsil=.true.</code>，观察 LO-TO 分裂</li>
+<li>使用 <code>dynmat.x</code> 可视化 $\Gamma$ 点声子的原子振动模式</li>
+</ol>

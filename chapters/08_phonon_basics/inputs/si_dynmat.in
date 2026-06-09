@@ -1,0 +1,6 @@
+&input
+    fildyn = 'si.dynG',
+    asr = 'simple',
+    filout = 'dynmat.out',
+    filxsf = 'dynmat.axsf',
+/

@@ -1,0 +1,46 @@
+&control
+    calculation = 'vc-relax',
+    prefix = 'si_vcrelax',
+    pseudo_dir   = '/home/faust/qe-7.0/pseudo/',
+    outdir = './tmp/',
+    verbosity = 'high',
+    tprnfor = .true.,
+    tstress = .true.,
+    forc_conv_thr = 1.0d-4,
+    etot_conv_thr = 1.0d-5,
+    nstep = 100
+/
+&system
+    ibrav = 0,
+    nat = 2,
+    ntyp = 1,
+    ecutwfc = 30.0,
+    ecutrho = 240.0,
+    occupations = 'fixed'
+/
+&electrons
+    conv_thr = 1.0d-8,
+    mixing_beta = 0.7
+/
+&ions
+    ion_dynamics = 'bfgs'
+/
+&cell
+    cell_dynamics = 'bfgs',
+    press = 0.0,
+    cell_factor = 1.2
+/
+CELL_PARAMETERS (angstrom)
+   0.0000000   2.7155000   2.7155000
+   2.7155000   0.0000000   2.7155000
+   2.7155000   2.7155000   0.0000000
+
+ATOMIC_SPECIES
+ Si  28.086  Si.pz-vbc.UPF
+
+ATOMIC_POSITIONS (crystal)
+ Si  0.00  0.00  0.00
+ Si  0.25  0.25  0.25
+
+K_POINTS (automatic)
+ 6 6 6 0 0 0

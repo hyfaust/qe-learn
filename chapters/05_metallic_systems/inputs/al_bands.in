@@ -1,0 +1,41 @@
+# Al FCC — 能带计算
+# 沿高对称路径: Gamma-X-W-L-Gamma-K
+# calculation='bands' 要求用 list 格式的 K_POINTS
+
+ &control
+    calculation  = 'bands'
+    restart_mode = 'from_scratch'
+    prefix       = 'al'
+    pseudo_dir   = '/home/faust/qe-7.0/pseudo/'
+    outdir       = './tmp/'
+ /
+
+ &system
+    ibrav        = 2
+    celldm(1)    = 7.50
+    nat          = 1
+    ntyp         = 1
+    ecutwfc      = 15.0
+    nbnd         = 8
+    occupations  = 'smearing'
+    smearing     = 'marzari-vanderbilt'
+    degauss      = 0.05
+ /
+
+ &electrons
+    diagonalization = 'david'
+ /
+
+ATOMIC_SPECIES
+ Al  26.98  Al.pz-vbc.UPF
+
+ATOMIC_POSITIONS alat
+ Al  0.00  0.00  0.00
+
+K_POINTS crystal_b
+5
+  0.000  0.000  0.000  20  ! Gamma
+  0.500  0.000  0.500  20  ! X
+  0.500  0.250  0.750  10  ! W
+  0.500  0.500  0.500  20  ! L
+  0.000  0.000  0.000  1   ! Gamma

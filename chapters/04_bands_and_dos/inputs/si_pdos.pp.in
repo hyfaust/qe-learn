@@ -1,0 +1,11 @@
+&projwfc
+    prefix      = 'silicon'
+    outdir      = './tmp/'
+    filpdos     = 'si_pdos'
+    filproj     = 'si_proj'
+    Emin        = -10.0
+    Emax        =  15.0
+    DeltaE      =   0.01
+    ngauss      = 0
+    degauss     = 0.01
+/

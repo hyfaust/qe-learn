@@ -1,0 +1,151 @@
+<h1 id="_1">第十一章：分子动力学与反应路径</h1>
+<h2 id="111">11.1 第一性原理分子动力学概述</h2>
+<p><strong>第一性原理分子动力学</strong>（AIMD）将 DFT 与牛顿力学结合，每步通过求解电子结构获得原子间力。Quantum ESPRESSO 提供两种方案：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>程序</th>
+<th>原理</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Born-Oppenheimer MD</strong></td>
+<td><code>pw.x</code></td>
+<td>每步求解电子基态</td>
+<td>通用、精度高</td>
+</tr>
+<tr>
+<td><strong>Car-Parrinello MD</strong></td>
+<td><code>cp.x</code></td>
+<td>电子与离子同时演化</td>
+<td>大体系、长时间模拟</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="112-born-oppenheimer-mdpwx">11.2 Born-Oppenheimer MD（pw.x）</h2>
+<p>在 <code>&amp;CONTROL</code> 中设置 <code>calculation='md'</code>，在 <code>&amp;IONS</code> 中控制离子运动：</p>
+<div class="codehilite"><pre><span></span><code><span class="p">&amp;</span><span class="n">CONTROL</span>
+<span class="w">  </span><span class="n">calculation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;md&#39;</span><span class="w">        </span><span class="c">! 分子动力学</span>
+<span class="w">  </span><span class="n">dt</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="mf">0.D0</span><span class="w">                </span><span class="c">! 时间步长 (a.u., 约 1 fs)</span>
+<span class="w">  </span><span class="n">nstep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span><span class="w">               </span><span class="c">! MD 步数</span>
+<span class="o">/</span>
+<span class="p">&amp;</span><span class="n">IONS</span>
+<span class="w">  </span><span class="n">pot_extrapolation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;second-order&#39;</span><span class="w">  </span><span class="c">! 势外推加速 SCF</span>
+<span class="w">  </span><span class="n">wfc_extrapolation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;second-order&#39;</span><span class="w">  </span><span class="c">! 波函数外推</span>
+<span class="w">  </span><span class="n">ion_temperature</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;not_controlled&#39;</span><span class="w">  </span><span class="c">! NVE 系综</span>
+<span class="o">/</span>
+</code></pre></div>
+
+<p><strong>时间步长</strong>：<code>dt=20</code> 约 0.97 fs；含氢体系建议 <code>dt=10</code>（约 0.5 fs）。</p>
+<hr />
+<h2 id="113-car-parrinello-mdcpx">11.3 Car-Parrinello MD（cp.x）</h2>
+<h3 id="_2">原理</h3>
+<p><strong>Car-Parrinello 方法</strong>将电子波函数视为具有虚拟质量的动力学变量，与离子同时演化，无需每步求解基态。通过选择足够小的电子虚拟质量 <code>emass</code>，保证电子绝热跟随离子。</p>
+<h3 id="cpmd">CPMD 关键参数</h3>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>建议值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dt</code></td>
+<td>时间步长 (a.u.)</td>
+<td>3.0–8.0</td>
+</tr>
+<tr>
+<td><code>emass</code></td>
+<td>电子虚拟质量 (a.u.)</td>
+<td>300–800</td>
+</tr>
+<tr>
+<td><code>emass_cutoff</code></td>
+<td>质量截断 (Ry)</td>
+<td>2.0–3.0</td>
+</tr>
+<tr>
+<td><code>electron_dynamics</code></td>
+<td>电子运动算法</td>
+<td><code>'verlet'</code></td>
+</tr>
+<tr>
+<td><code>ion_dynamics</code></td>
+<td>离子运动算法</td>
+<td><code>'verlet'</code></td>
+</tr>
+<tr>
+<td><code>ion_temperature</code></td>
+<td>温度控制</td>
+<td><code>'nose'</code>（Nosé-Hoover）</td>
+</tr>
+</tbody>
+</table>
+<div class="codehilite"><pre><span></span><code><span class="p">&amp;</span><span class="n">IONS</span>
+<span class="w">  </span><span class="n">ion_dynamics</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;verlet&#39;</span>
+<span class="w">  </span><span class="n">ion_temperature</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;nose&#39;</span>
+<span class="w">  </span><span class="n">tempw</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">30</span><span class="mf">0.</span><span class="w">          </span><span class="c">! 目标温度 (K)</span>
+<span class="w">  </span><span class="n">fnosep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">6.6666</span><span class="w">       </span><span class="c">! 热浴频率</span>
+<span class="o">/</span>
+</code></pre></div>
+
+<hr />
+<h2 id="114">11.4 系综与温度控制</h2>
+<table>
+<thead>
+<tr>
+<th>系综</th>
+<th>实现方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>NVE</strong></td>
+<td><code>ion_temperature='not_controlled'</code></td>
+</tr>
+<tr>
+<td><strong>NVT</strong></td>
+<td>Nosé-Hoover：<code>ion_temperature='nose'</code> + <code>fnosep</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>经验法则</strong>：<code>dt</code> 应小于最快振动模式周期的 1/10–1/20。O-H 伸缩（~3600 cm⁻¹）需 <code>dt</code> ≤ 10 a.u.</p>
+<hr />
+<h2 id="115-neb">11.5 NEB 方法</h2>
+<p><strong>Nudged Elastic Band（NEB）</strong> 在反应物与产物间插入一系列中间构型（<strong>镜像 images</strong>），用弹簧力连接，寻找<strong>最小能量路径</strong>（MEP）。<strong>Climbing Image NEB（CI-NEB）</strong> 允许最高能量镜像"爬升"到鞍点，精确确定过渡态。</p>
+<p>NEB 输入文件结构（注意：<code>neb.x</code> 使用 <code>-inp</code> 指定输入文件）：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">BEGIN</span>
+<span class="n">BEGIN_PATH_INPUT</span>
+<span class="p">&amp;</span><span class="n">PATH</span>
+<span class="w">  </span><span class="n">string_method</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;neb&#39;</span>
+<span class="w">  </span><span class="n">num_of_images</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">7</span><span class="w">         </span><span class="c">! 镜像总数（含首尾）</span>
+<span class="w">  </span><span class="n">nstep_path</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="mi">20</span><span class="w">        </span><span class="c">! 路径优化步数</span>
+<span class="w">  </span><span class="n">opt_scheme</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;broyden&#39;</span><span class="w"> </span><span class="c">! 优化方案</span>
+<span class="w">  </span><span class="n">k_max</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.3</span><span class="p">,</span><span class="w"> </span><span class="n">k_min</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.2</span><span class="w">  </span><span class="c">! 弹簧常数范围</span>
+<span class="w">  </span><span class="n">CI_scheme</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;auto&#39;</span><span class="w">        </span><span class="c">! 自动爬升镜像</span>
+<span class="w">  </span><span class="n">path_thr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.05</span><span class="w">           </span><span class="c">! 收敛阈值</span>
+<span class="o">/</span>
+<span class="n">END_PATH_INPUT</span>
+<span class="n">BEGIN_ENGINE_INPUT</span>
+<span class="w">  </span><span class="c">! 标准 pw.x 输入内容</span>
+<span class="n">BEGIN_POSITIONS</span>
+<span class="n">FIRST_IMAGE</span>
+<span class="w">  </span><span class="n">ATOMIC_POSITIONS</span><span class="w"> </span><span class="err">{</span><span class="w"> </span><span class="n">angstrom</span><span class="w"> </span><span class="err">}</span><span class="w"> </span><span class="p">...</span><span class="w">    </span><span class="c">! 初始构型</span>
+<span class="n">LAST_IMAGE</span>
+<span class="w">  </span><span class="n">ATOMIC_POSITIONS</span><span class="w"> </span><span class="err">{</span><span class="w"> </span><span class="n">angstrom</span><span class="w"> </span><span class="err">}</span><span class="w"> </span><span class="p">...</span><span class="w">    </span><span class="c">! 末态构型</span>
+<span class="n">END_POSITIONS</span>
+<span class="n">END_ENGINE_INPUT</span>
+<span class="k">END</span>
+</code></pre></div>
+
+<p><strong><code>path_interpolation.x</code></strong> 可在首末态间样条插值生成中间镜像，为 NEB 提供合理初始路径。</p>
+<hr />
+<h2 id="116">11.6 计算流程</h2>
+<div class="codehilite"><pre><span></span><code>结构优化 → 准备首末态 → path_interpolation.x 插值 → neb.x 运行 → 分析能垒
+</code></pre></div>

@@ -1,0 +1,206 @@
+<h1 id="_1">第五章：金属体系与展宽方法</h1>
+<h2 id="_2">金属与绝缘体的本质区别</h2>
+<p>在固体物理中，<strong>金属</strong>和<strong>绝缘体</strong>的核心区别在于<strong>费米面</strong>（Fermi surface）附近电子态的占据情况：</p>
+<ul>
+<li><strong>绝缘体/半导体</strong>：存在<strong>带隙</strong>（band gap），费米能级位于价带顶和导带底之间，所有占据态和非占据态之间有明确分界</li>
+<li><strong>金属</strong>：<strong>无带隙</strong>，费米能级穿过能带，存在部分占据的能带，形成费米面</li>
+</ul>
+<p>在 DFT 计算中，这种区别直接影响数值求解策略。绝缘体的电子占据数在 0 k 格点上要么是 0 要么是 1（整数），而金属的占据数在费米面附近是<strong>分数</strong>的。</p>
+<h2 id="smearing">为什么金属需要展宽（Smearing）</h2>
+<p>金属计算面临一个关键的<strong>数值不稳定性</strong>问题。在 k 空间中离散采样时，费米面附近的 k 点可能恰好处于能带穿越费米能级的位置。微小的 k 点变化会导致某个态从"完全占据"变为"完全未占据"，使得总能量对 k 点网格极度敏感，导致 SCF 迭代难以收敛。</p>
+<p><strong>展宽方法</strong>的核心思想：将阶梯函数形式的费米-狄拉克占据数替换为<strong>平滑函数</strong>，用一个有限宽度 σ（即 <code>degauss</code> 参数）来模糊占据与未占据的边界，从而稳定数值计算。</p>
+<p>在 Quantum ESPRESSO 中，通过以下参数控制展宽：</p>
+<div class="codehilite"><pre><span></span><code><span class="nx">occupations</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="err">&#39;</span><span class="nx">smearing</span><span class="err">&#39;</span>
+<span class="nx">smearing</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="err">&#39;</span><span class="k">type</span><span class="err">&#39;</span>
+<span class="nx">degauss</span><span class="w">     </span><span class="p">=</span><span class="w"> </span><span class="nx">sigma</span><span class="w">    </span><span class="p">!</span><span class="w"> </span><span class="nx">以</span><span class="w"> </span><span class="nx">Ry</span><span class="w"> </span><span class="nx">为单位</span>
+</code></pre></div>
+
+<h2 id="_3">展宽方法详解</h2>
+<h3 id="1-gaussian">1. Gaussian 展宽</h3>
+<p>最简单的展宽方法，将每个能级的 δ 函数替换为高斯函数：</p>
+<p>$$f(\varepsilon) = \tfrac{1}{2}\,\text{erfc}\!\left(\frac{\varepsilon - \varepsilon_F}{\sigma}\right)$$</p>
+<ul>
+<li><strong>优点</strong>：简单直观，易于理解</li>
+<li><strong>缺点</strong>：收敛较慢，需要较大的 k 点网格</li>
+<li><strong>适用</strong>：入门学习、简单测试</li>
+</ul>
+<h3 id="2-methfessel-paxton-mp">2. Methfessel-Paxton (MP) 展宽</h3>
+<p>通过 Hermite 多项式修正高斯函数，消除低阶矩的误差：</p>
+<div class="codehilite"><pre><span></span><code>smearing = &#39;methfessel-paxton&#39;
+</code></pre></div>
+
+<ul>
+<li><strong>参数 N</strong>：阶数（默认 N=1），控制修正的阶次</li>
+<li><strong>优点</strong>：高阶矩被精确消去，总能量对 σ 的依赖极弱</li>
+<li><strong>缺点</strong>：可能出现<strong>负的占据数</strong>（物理上不合理，但数学上正确）</li>
+<li><strong>适用</strong>：<strong>金属体系的首选方法</strong>，特别是态密度计算</li>
+</ul>
+<h3 id="3-marzari-vanderbilt-cold-smearing">3. Marzari-Vanderbilt（冷展宽 / Cold Smearing）</h3>
+<p>由 Marzari 和 Vanderbilt 提出，最小化对物理基态的扰动：</p>
+<div class="codehilite"><pre><span></span><code>smearing = &#39;marzari-vanderbilt&#39;
+</code></pre></div>
+
+<ul>
+<li><strong>优点</strong>：总能量是 σ 的<strong>单调递减函数</strong>，便于外推到 σ→0</li>
+<li><strong>缺点</strong>：也可能出现负占据数</li>
+<li><strong>适用</strong>：需要精确总能量和力的计算（如结构优化）</li>
+</ul>
+<h3 id="4-fermi-dirac">4. Fermi-Dirac 展宽</h3>
+<p>直接使用物理的费米-狄拉克分布函数：</p>
+<div class="codehilite"><pre><span></span><code>smearing = &#39;fermi-dirac&#39;
+</code></pre></div>
+
+<ul>
+<li><strong>物理意义</strong>：对应真实温度 T，σ = k_B T</li>
+<li><strong>优点</strong>：物理上最自然</li>
+<li><strong>缺点</strong>：对 σ 值敏感，收敛较慢</li>
+<li><strong>适用</strong>：需要与真实温度关联的计算、MD 模拟</li>
+</ul>
+<h2 id="_4">展宽方法对比</h2>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>关键字</th>
+<th>能量对 σ 的行为</th>
+<th>负占据数</th>
+<th>推荐场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gaussian</td>
+<td><code>gaussian</code></td>
+<td>依赖较强</td>
+<td>否</td>
+<td>学习、测试</td>
+</tr>
+<tr>
+<td>Methfessel-Paxton</td>
+<td><code>methfessel-paxton</code></td>
+<td>依赖极弱</td>
+<td>可能</td>
+<td><strong>金属 SCF 首选</strong></td>
+</tr>
+<tr>
+<td>Marzari-Vanderbilt</td>
+<td><code>marzari-vanderbilt</code></td>
+<td>单调递减</td>
+<td>可能</td>
+<td>结构优化、力计算</td>
+</tr>
+<tr>
+<td>Fermi-Dirac</td>
+<td><code>fermi-dirac</code></td>
+<td>依赖较强</td>
+<td>否</td>
+<td>有限温度 MD</td>
+</tr>
+</tbody>
+</table>
+<h2 id="degauss">degauss 参数的选择策略</h2>
+<p><code>degauss</code> 是展宽宽度，以 <strong>Ry</strong> 为单位。选择原则：</p>
+<ul>
+<li><strong>过小</strong>：收敛慢，需要极密的 k 点网格</li>
+<li><strong>过大</strong>：物理量被过度模糊，偏离真实值</li>
+<li><strong>经验值</strong>：</li>
+<li>Al 等自由电子金属：<code>degauss = 0.03 ~ 0.05 Ry</code></li>
+<li>Cu、Ni 等 d 电子金属：<code>degauss = 0.01 ~ 0.03 Ry</code></li>
+<li><strong>收敛测试</strong>：先固定 k 点网格，扫描 degauss 值，使总能量变化 &lt; 1 meV/atom</li>
+</ul>
+<p>最佳实践：进行 <strong>degauss 和 k 点网格的联合收敛测试</strong>，找到使总能量收敛的最优组合。</p>
+<h2 id="k">金属计算需要更多 k 点</h2>
+<p>金属计算中 k 点网格通常比绝缘体<strong>密 2~4 倍</strong>，原因：</p>
+<ol>
+<li><strong>费米面采样</strong>：需要足够密的网格精确描述费米面的形状</li>
+<li><strong>展宽收敛</strong>：小 degauss 值要求更密的网格</li>
+<li><strong>经验起点</strong>：FCC 金属通常从 <code>8×8×8</code> 或 <code>10×10×10</code> 开始测试</li>
+</ol>
+<h2 id="ecutrho">超软赝势与 ecutrho</h2>
+<p>Cu 的赝势 <code>Cu.pz-d-rrkjus.UPF</code> 是<strong>超软赝势</strong>（USPP），注意名字中的 "rrkjus"。与 norm-conserving 赝势相比：</p>
+<ul>
+<li><code>ecutwfc</code> 较低（25 Ry vs 通常 40+ Ry），平面波截断能更小</li>
+<li>需要额外设置 <code>ecutrho</code>（电荷密度截断能），通常为 <code>ecutwfc</code> 的 8~12 倍</li>
+<li>对于 USPP，<code>ecutrho = 300 Ry</code> 对应 <code>ecutwfc</code> 的 12 倍</li>
+</ul>
+<div class="codehilite"><pre><span></span><code>ecutwfc = 25.0
+ecutrho = 300.0    ! 超软赝势必须指定
+</code></pre></div>
+
+<p>Al 使用的 <code>Al.pz-vbc.UPF</code> 是 norm-conserving 赝势，不需要指定 <code>ecutrho</code>。</p>
+<h2 id="_5">三种金属的对比</h2>
+<h3 id="al">Al — 自由电子金属</h3>
+<ul>
+<li>FCC 结构，<code>celldm(1) = 7.50 Bohr</code></li>
+<li><strong>s-p 电子</strong>，能带接近自由电子抛物线</li>
+<li>费米面接近球形，k 点收敛较快</li>
+<li>使用 Marzari-Vanderbilt 展宽，<code>degauss = 0.05 Ry</code></li>
+</ul>
+<h3 id="cu-d">Cu — d 电子金属</h3>
+<ul>
+<li>FCC 结构，<code>celldm(1) = 6.73 Bohr</code></li>
+<li><strong>d 电子</strong>在费米面附近形成复杂能带结构</li>
+<li>费米面有明显的 neck 结构，需要更密的 k 点</li>
+<li>使用超软赝势，<code>ecutrho = 300.0</code></li>
+<li><code>degauss = 0.02 Ry</code>（比 Al 更小，因为 d 带更窄）</li>
+</ul>
+<h3 id="ni">Ni — 磁性金属（第七章预览）</h3>
+<ul>
+<li>FCC 结构，<code>celldm(1) = 6.48 Bohr</code></li>
+<li><strong>自旋极化</strong>：<code>nspin = 2</code>，需要设置初始磁矩</li>
+<li>d 电子的交换劈裂导致自旋向上/向下的能带分裂</li>
+<li>本章仅做了解，详细计算将在第七章展开</li>
+</ul>
+<h2 id="_6">本章输入文件说明</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>体系</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="chapters/05_metallic_systems/inputs/al_scf.in"><code>inputs/al_scf.in</code></a></td>
+<td>Al FCC</td>
+<td>SCF 基态，Marzari-Vanderbilt 展宽</td>
+</tr>
+<tr>
+<td><a href="chapters/05_metallic_systems/inputs/cu_scf.in"><code>inputs/cu_scf.in</code></a></td>
+<td>Cu FCC</td>
+<td>SCF 基态，超软赝势，Marzari-Vanderbilt 展宽</td>
+</tr>
+<tr>
+<td><a href="chapters/05_metallic_systems/inputs/cu_scf_gauss.in"><code>inputs/cu_scf_gauss.in</code></a></td>
+<td>Cu FCC</td>
+<td>对比：Gaussian 展宽</td>
+</tr>
+<tr>
+<td><a href="chapters/05_metallic_systems/inputs/al_bands.in"><code>inputs/al_bands.in</code></a></td>
+<td>Al FCC</td>
+<td>能带计算（沿 Γ-X-W-L-Γ-K 路径）</td>
+</tr>
+<tr>
+<td><a href="chapters/05_metallic_systems/inputs/cu_bands.in"><code>inputs/cu_bands.in</code></a></td>
+<td>Cu FCC</td>
+<td>能带计算</td>
+</tr>
+<tr>
+<td><a href="chapters/05_metallic_systems/inputs/al_bands.pp.in"><code>inputs/al_bands.pp.in</code></a></td>
+<td>Al</td>
+<td>bands.x 后处理</td>
+</tr>
+<tr>
+<td><a href="chapters/05_metallic_systems/inputs/cu_bands.pp.in"><code>inputs/cu_bands.pp.in</code></a></td>
+<td>Cu</td>
+<td>bands.x 后处理</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_7">练习</h2>
+<ol>
+<li>对 Al 进行 degauss 收敛测试：固定 <code>8 8 8</code> k 点，扫描 degauss = 0.01, 0.02, 0.03, 0.05, 0.07, 0.10 Ry，比较总能量</li>
+<li>对比 Cu 使用 Gaussian 和 Marzari-Vanderbilt 展宽的总能量差异</li>
+<li>画出 Al 和 Cu 的能带结构，比较 s-p 金属和 d 金属的能带特征</li>
+</ol>

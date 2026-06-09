@@ -1,0 +1,169 @@
+<h1 id="_1">第四章：能带结构与态密度</h1>
+<h2 id="41">4.1 能带理论基础</h2>
+<h3 id="bloch">Bloch 定理</h3>
+<p>在周期性晶体中，电子波函数满足 <strong>Bloch 定理</strong>：$\psi_{n\mathbf{k}}(\mathbf{r}) = e^{i\mathbf{k}\cdot\mathbf{r}} u_{n\mathbf{k}}(\mathbf{r})$，其中 $u_{n\mathbf{k}}$ 具有晶格周期性。每个 $\mathbf{k}$ 点对应一组离散能量本征值 $E_n(\mathbf{k})$，将 $E_n(\mathbf{k})$ 沿布里渊区高对称路径画出，即为<strong>能带结构</strong>。</p>
+<ul>
+<li><strong>价带</strong>：被电子占据的最高能带；<strong>导带</strong>：未占据的最低能带</li>
+<li><strong>带隙</strong>：价带顶与导带底的能量差，决定材料的导电性质</li>
+</ul>
+<hr />
+<h2 id="42">4.2 计算工作流</h2>
+<div class="codehilite"><pre><span></span><code>┌─────────────┐     ┌───────────────────┐     ┌───────────────┐
+│  SCF 自洽   │────▶│  bands / nscf 计算 │────▶│  后处理提取    │
+│  si_scf.in  │     │  si_bands.in 或    │     │  bands.x      │
+│  4×4×4 k点  │     │  si_dos.in        │     │  dos.x        │
+│  确定基态   │     │  更多k点/更多能带  │     │  projwfc.x    │
+└─────────────┘     └───────────────────┘     └───────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="43">4.3 能带计算详解</h2>
+<h3 id="step-1scf">Step 1：SCF 自洽计算</h3>
+<p>SCF 确定基态电荷密度和费米能级，使用较少的 k 点（4×4×4）即可收敛。</p>
+<h3 id="step-2">Step 2：能带计算</h3>
+<div class="codehilite"><pre><span></span><code><span class="p">&amp;</span><span class="n">control</span>
+<span class="w">    </span><span class="n">calculation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;bands&#39;</span><span class="w">   </span><span class="c">! 沿高对称路径计算</span>
+<span class="w">    </span><span class="n">prefix</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;silicon&#39;</span>
+<span class="w">    </span><span class="p">...</span>
+<span class="o">/</span>
+<span class="p">&amp;</span><span class="nb">system</span>
+<span class="nb">    </span><span class="n">nbnd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span><span class="w">   </span><span class="c">! 计算 8 条能带（Si 有 8 个价电子）</span>
+<span class="w">    </span><span class="p">...</span>
+<span class="o">/</span>
+<span class="n">K_POINTS</span><span class="w"> </span><span class="n">tpiba_b</span>
+<span class="w">  </span><span class="mi">5</span>
+<span class="w">  </span><span class="mf">0.5</span><span class="w">  </span><span class="mf">0.5</span><span class="w">  </span><span class="mf">0.5</span><span class="w">   </span><span class="mi">30</span><span class="w">   </span><span class="c">! L</span>
+<span class="w">  </span><span class="mf">0.0</span><span class="w">  </span><span class="mf">0.0</span><span class="w">  </span><span class="mf">0.0</span><span class="w">   </span><span class="mi">30</span><span class="w">   </span><span class="c">! Gamma</span>
+<span class="w">  </span><span class="mf">1.0</span><span class="w">  </span><span class="mf">0.0</span><span class="w">  </span><span class="mf">0.0</span><span class="w">   </span><span class="mi">30</span><span class="w">   </span><span class="c">! X</span>
+<span class="w">  </span><span class="mf">1.0</span><span class="w">  </span><span class="mf">0.25</span><span class="w"> </span><span class="mf">0.25</span><span class="w">  </span><span class="mi">30</span><span class="w">   </span><span class="c">! W</span>
+<span class="w">  </span><span class="mf">0.75</span><span class="w"> </span><span class="mf">0.75</span><span class="w"> </span><span class="mf">0.0</span><span class="w">    </span><span class="mi">1</span><span class="w">   </span><span class="c">! K</span>
+</code></pre></div>
+
+<blockquote>
+<p><strong><code>nbnd</code> 参数</strong>：计算的能带数目。默认为价电子数/2 + 若干空带。Si 有 8 个价电子，设 <code>nbnd=8</code> 获得全部价带；设更大值（如 12）可同时获得导带信息。</p>
+<p><strong><code>'nscf'</code> vs <code>'bands'</code> 的区别</strong>：<br />
+- <code>calculation='nscf'</code>：均匀 k 网格，用于 DOS/PDOS<br />
+- <code>calculation='bands'</code>：高对称路径，用于能带图</p>
+</blockquote>
+<h3 id="step-3bandsx">Step 3：bands.x 后处理</h3>
+<div class="codehilite"><pre><span></span><code><span class="p">&amp;</span><span class="n">bands</span>
+<span class="w">    </span><span class="n">prefix</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;silicon&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">outdir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;./tmp/&#39;</span>
+<span class="w">    </span><span class="n">filband</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;si_bands.dat&#39;</span>
+<span class="w">    </span><span class="n">lsym</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.</span><span class="n">true</span><span class="p">.</span><span class="w">   </span><span class="c">! 标注能带对称性</span>
+<span class="o">/</span>
+</code></pre></div>
+
+<h3 id="step-4plotbandx">Step 4：plotband.x 绘图</h3>
+<p>plotband.x 读取 <code>si_bands.dat</code>，生成 PostScript 或 xmgrace 格式的能带图。需指定费米能级（从 SCF 输出获取）。</p>
+<hr />
+<h2 id="44-fcc-si">4.4 FCC Si 高对称路径</h2>
+<table>
+<thead>
+<tr>
+<th>高对称点</th>
+<th>坐标 (tpiba_b)</th>
+<th>对称性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L</td>
+<td>0.5 0.5 0.5</td>
+<td>C₃ᵥ</td>
+</tr>
+<tr>
+<td>Γ</td>
+<td>0.0 0.0 0.0</td>
+<td>Oₕ</td>
+</tr>
+<tr>
+<td>X</td>
+<td>1.0 0.0 0.0</td>
+<td>C₄ᵥ</td>
+</tr>
+<tr>
+<td>W</td>
+<td>1.0 0.25 0.25</td>
+<td>C₂ᵥ</td>
+</tr>
+<tr>
+<td>K</td>
+<td>0.75 0.75 0.0</td>
+<td>C₂ᵥ</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="45-dos">4.5 态密度（DOS）</h2>
+<p>SCF → <code>calculation='nscf'</code>（更密 k 网格，如 12×12×12） → <code>dos.x</code>：</p>
+<div class="codehilite"><pre><span></span><code><span class="p">&amp;</span><span class="n">dos</span>
+<span class="w">    </span><span class="n">prefix</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;silicon&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">outdir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;./tmp/&#39;</span>
+<span class="w">    </span><span class="n">fildos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;si_dos.dat&#39;</span>
+<span class="w">    </span><span class="n">Emin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="n">Emax</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="mf">5.0</span><span class="p">,</span><span class="w"> </span><span class="n">DeltaE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.01</span>
+<span class="o">/</span>
+</code></pre></div>
+
+<p>DOS 给出单位能量区间内的电子态数目，积分可得总电子数。</p>
+<hr />
+<h2 id="46-pdos">4.6 投影态密度（PDOS）</h2>
+<p><code>projwfc.x</code> 将波函数投影到原子轨道，分析各轨道（如 Si 3s、3p）的贡献：</p>
+<div class="codehilite"><pre><span></span><code><span class="p">&amp;</span><span class="n">projwfc</span>
+<span class="w">    </span><span class="n">prefix</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;silicon&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">outdir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;./tmp/&#39;</span>
+<span class="w">    </span><span class="n">filpdos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;si_pdos&#39;</span>
+<span class="w">    </span><span class="n">ngauss</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">degauss</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.01</span>
+<span class="o">/</span>
+</code></pre></div>
+
+<p>输出 <code>si_pdos.*.dat</code> 包含各原子各角动量通道的投影态密度，可分析 sp³ 杂化等成键特征。</p>
+<hr />
+<h2 id="47">4.7 关键概念卡片</h2>
+<blockquote>
+<p><strong>费米能级</strong>：绝对零度下电子占据态与未占据态的分界能量。SCF 输出中 <code>the Fermi energy is</code> 即为费米能级（eV），能带图中通常以其为能量零点。</p>
+<p><strong>带隙</strong>：价带顶到导带底的能量差。Si 为间接带隙半导体（实验值 ~1.17 eV），LDA/PBE 通常低估带隙。</p>
+<p><strong>高对称点</strong>：布里渊区中具有特殊对称性的点，能带在这些点处发生简并。FCC 标准路径 L-Γ-X-W-K 覆盖了最重要的高对称点。</p>
+</blockquote>
+<hr />
+<h2 id="48">4.8 输入文件一览</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="chapters/04_bands_and_dos/inputs/si_scf.in"><code>inputs/si_scf.in</code></a></td>
+<td>SCF 自洽计算</td>
+</tr>
+<tr>
+<td><a href="chapters/04_bands_and_dos/inputs/si_nscf.in"><code>inputs/si_nscf.in</code></a></td>
+<td>NSCF 均匀密 k 网格</td>
+</tr>
+<tr>
+<td><a href="chapters/04_bands_and_dos/inputs/si_bands.in"><code>inputs/si_bands.in</code></a></td>
+<td>能带计算（高对称路径）</td>
+</tr>
+<tr>
+<td><a href="chapters/04_bands_and_dos/inputs/si_bands.pp.in"><code>inputs/si_bands.pp.in</code></a></td>
+<td>bands.x 后处理</td>
+</tr>
+<tr>
+<td><a href="chapters/04_bands_and_dos/inputs/si_dos.in"><code>inputs/si_dos.in</code></a></td>
+<td>DOS 的 NSCF 输入</td>
+</tr>
+<tr>
+<td><a href="chapters/04_bands_and_dos/inputs/si_dos.pp.in"><code>inputs/si_dos.pp.in</code></a></td>
+<td>dos.x 态密度后处理</td>
+</tr>
+<tr>
+<td><a href="chapters/04_bands_and_dos/inputs/si_pdos.pp.in"><code>inputs/si_pdos.pp.in</code></a></td>
+<td>projwfc.x 投影态密度</td>
+</tr>
+<tr>
+<td><a href="chapters/04_bands_and_dos/scripts/bands_workflow.sh"><code>scripts/bands_workflow.sh</code></a></td>
+<td>完整计算流程脚本</td>
+</tr>
+</tbody>
+</table>
+<p>运行完整流程：<code>cd scripts &amp;&amp; bash bands_workflow.sh</code></p>

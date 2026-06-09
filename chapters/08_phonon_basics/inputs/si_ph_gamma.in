@@ -1,0 +1,10 @@
+Si phonon at Gamma point
+&inputph
+    tr2_ph = 1.0d-14,
+    prefix = 'silicon',
+    epsil = .true.,
+    amass(1) = 28.08,
+    outdir = './tmp/',
+    fildyn = 'si.dynG',
+/
+0.0  0.0  0.0

@@ -1,0 +1,5 @@
+ &bands
+    prefix = 'ni_fm',
+    outdir = './tmp/',
+    filband = 'ni_fm_bands.dat',
+ /

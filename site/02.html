@@ -1,0 +1,166 @@
+<h1 id="_1">第二章：平面波基组与赝势</h1>
+<h2 id="1">1. 平面波展开原理</h2>
+<p>在固体的量子力学计算中，我们需要用一组基函数来展开电子波函数。<strong>平面波（plane wave）</strong> 是最常用的选择之一，原因在于：</p>
+<ul>
+<li><strong>天然满足周期性边界条件</strong>：晶体中电子波函数遵循 Bloch 定理，平面波正是周期函数的自然基组。</li>
+<li><strong>基组不依赖原子位置</strong>：无论原子如何移动，平面波基组始终保持不变，这对结构优化和分子动力学非常有利。</li>
+<li><strong>易于系统性改进</strong>：通过增大截断能，可以系统地逼近完备基组极限。</li>
+</ul>
+<p>波函数展开形式为：</p>
+<p>$$\psi_{n\mathbf{k}}(\mathbf{r}) = \sum_{\mathbf{G}} c_{n,\mathbf{k}+\mathbf{G}} \, e^{i(\mathbf{k}+\mathbf{G})\cdot\mathbf{r}}$$</p>
+<p>其中 $\mathbf{G}$ 为倒格矢。实际计算中，我们需要对动能 $\frac{1}{2}|\mathbf{k}+\mathbf{G}|^2$ 进行截断，这就是 <strong>截断能（ecutwfc）</strong> 的含义。</p>
+<blockquote>
+<p><strong>关键概念：截断能</strong></p>
+<p>截断能 <code>ecutwfc</code> 定义了保留哪些平面波分量。只有动能 $\frac{\hbar^2}{2m}|\mathbf{k}+\mathbf{G}|^2 < E_{\text{cut}}$ 的平面波才被包含在基组中。截断能越大 → 基组越完备 → 计算越精确，但计算量也越大。</p>
+</blockquote>
+<hr />
+<h2 id="2">2. 赝势理论</h2>
+<p>真实的原子核附近电子波函数剧烈振荡（<strong>硬核</strong>区域），需要极高的截断能才能精确描述，这在实际计算中不可行。<strong>赝势（pseudopotential）</strong> 的核心思想是：用一个平滑的赝势函数替代离子实区域的剧烈变化，只显式处理价电子。</p>
+<h3 id="21">2.1 三种赝势类型</h3>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>全称</th>
+<th>特点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>NC</strong></td>
+<td>模守恒赝势 (Norm-Conserving)</td>
+<td>赝波函数在截断半径外与全电子波函数一致，电荷守恒</td>
+<td>通用性好，适合绝缘体和半导体</td>
+</tr>
+<tr>
+<td><strong>USPP</strong></td>
+<td>超软赝势 (Ultrasoft)</td>
+<td>放弃模守恒条件，用更少的平面波描述波函数</td>
+<td>过渡金属、含 d/f 电子体系</td>
+</tr>
+<tr>
+<td><strong>PAW</strong></td>
+<td>投影缀加波 (Projector Augmented Wave)</td>
+<td>通过线性变换恢复全电子信息，精度最高</td>
+<td>高精度计算、磁性体系</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>关键概念：赝势的"硬"与"软"</strong></p>
+<p><strong>硬核赝势</strong>（如 NC）在截断半径附近变化陡峭，需要较大的 ecutwfc。<strong>软核赝势</strong>（如 USPP、PAW）赝波函数更平滑，所需 ecutwfc 更小，但计算中需要额外的增强电荷密度，因此需要更大的 ecutrho。</p>
+</blockquote>
+<h3 id="22">2.2 选择指南</h3>
+<ul>
+<li><strong>初学者首选</strong>：NC 赝势（格式简单，参数少，ecutrho = 4 × ecutwfc 即可）</li>
+<li><strong>追求效率</strong>：USPP / PAW（ecutwfc 较小，但 ecutrho 需设为 ecutwfc 的 8–12 倍）</li>
+<li><strong>高精度 / 磁性</strong>：PAW</li>
+<li><strong>参考数据库</strong>：<a href="https://www.materialscloud.org/discover/sssp">SSSP</a> 提供经过验证的赝势和推荐截断能</li>
+</ul>
+<hr />
+<h2 id="3-upf">3. UPF 文件格式</h2>
+<p>Quantum ESPRESSO 使用 <strong>UPF（Unified Pseudopotential Format）</strong> 格式的赝势文件（扩展名 <code>.UPF</code>），通常存放在 QE 安装目录的 <code>pseudo/</code> 子目录中。</p>
+<p>文件命名示例：<code>Si.pz-vbc.UPF</code><br />
+- <code>Si</code> — 元素符号<br />
+- <code>pz</code> — 交换关联泛函（Perdew-Zunger LDA）<br />
+- <code>vbc</code> — 赝势类型/生成方案标识</p>
+<p>UPF 文件包含：格点上的赝势和波函数、局域势、非局域投影算符、交换关联信息等。通常<strong>不需要手动编辑</strong>，只需在输入文件中正确引用即可。</p>
+<hr />
+<h2 id="4-ecutwfc">4. ecutwfc 收敛性测试</h2>
+<p>确定合适截断能的标准方法是<strong>收敛性测试</strong>：逐步增大 ecutwfc，观察总能量的变化，选择能量变化小于所需精度的最小值。</p>
+<h3 id="_2">方法步骤</h3>
+<ol>
+<li>选择一组递增的截断能（如 10, 15, 20, 25, 30 Ry）</li>
+<li>对每个截断能执行 SCF 计算（其他参数保持不变）</li>
+<li>提取总能量，计算相邻截断能之间的能量差 $\Delta E$</li>
+<li>当 $|\Delta E|$ 小于目标精度（通常 ~1 meV/atom ≈ 0.00007 Ry/atom）时，选择该截断能</li>
+</ol>
+<p>运行本章提供的收敛测试脚本：</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>chapters/02_plane_waves_pseudopotentials
+bash<span class="w"> </span>scripts/convergence_test.sh<span class="w"> </span>pw.x
+</code></pre></div>
+
+<p>预期结果：对于 Si + <code>Si.pz-vbc.UPF</code>（NC 赝势），ecutwfc 约在 <strong>16–20 Ry</strong> 附近收敛。</p>
+<hr />
+<h2 id="5-ecutrho-ecutwfc">5. ecutrho 与 ecutwfc 的关系</h2>
+<p>在平面波计算中，<strong>电荷密度</strong>也需要用平面波展开。电荷密度 $n(\mathbf{r}) = |\psi|^2$ 包含两倍于波函数的频率分量，因此需要更大的截断能。</p>
+<table>
+<thead>
+<tr>
+<th>赝势类型</th>
+<th>ecutrho 与 ecutwfc 的关系</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>NC</strong> (模守恒)</td>
+<td><code>ecutrho = 4 × ecutwfc</code></td>
+<td>理论最低要求；QE 中 NC 赝势默认值即为 4 倍</td>
+</tr>
+<tr>
+<td><strong>USPP</strong> (超软)</td>
+<td><code>ecutrho = 8 × ecutwfc</code></td>
+<td>增强电荷密度需要更高截断</td>
+</tr>
+<tr>
+<td><strong>PAW</strong></td>
+<td><code>ecutrho = 8~12 × ecutwfc</code></td>
+<td>取决于具体实现</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>注意</strong>：<code>ecutrho</code> 设置过低会导致 SCF 不收敛或能量不正确；设置过高仅浪费少量计算资源。宁可设大一些。</p>
+</blockquote>
+<hr />
+<h2 id="6">6. 关键参数一览</h2>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>单位</th>
+<th>NC 推荐值</th>
+<th>USPP/PAW 推荐值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ecutwfc</code></td>
+<td>波函数截断能</td>
+<td>Ry</td>
+<td>赝势文件标注值（Si: ~16 Ry）</td>
+<td>赝势文件标注值（通常 30–50 Ry）</td>
+</tr>
+<tr>
+<td><code>ecutrho</code></td>
+<td>电荷密度截断能</td>
+<td>Ry</td>
+<td>4 × ecutwfc</td>
+<td>8–12 × ecutwfc</td>
+</tr>
+<tr>
+<td><code>pseudo_dir</code></td>
+<td>赝势文件路径</td>
+<td>—</td>
+<td>QE 安装目录 /pseudo/</td>
+<td>同左</td>
+</tr>
+<tr>
+<td><code>conv_thr</code></td>
+<td>SCF 收敛阈值</td>
+<td>Ry</td>
+<td>1.0d-8（标准精度）</td>
+<td>同左</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_3">本章练习</h2>
+<ol>
+<li>运行 <a href="chapters/02_plane_waves_pseudopotentials/scripts/convergence_test.sh"><code>convergence_test.sh</code></a>，绘制 ecutwfc vs. 总能量的收敛曲线</li>
+<li>尝试更换赝势文件（如 <code>Si.pz-rrkjus.UPF</code>，USPP 类型），比较所需截断能的变化</li>
+<li>将 <code>ecutrho</code> 设为很低的值（如与 ecutwfc 相同），观察计算是否报错</li>
+</ol>

@@ -1,0 +1,192 @@
+<h1 id="k">第三章：k 空间采样与布里渊区</h1>
+<h2 id="1">1. 倒格子与布里渊区</h2>
+<p>晶体的<strong>周期性</strong>决定了电子态可以用<strong>波矢 k</strong> 来标记。实空间中的布拉维格子对应一个<strong>倒格子</strong>（reciprocal lattice），其基矢 $\mathbf{b}_i$ 满足：</p>
+<p>$$\mathbf{a}_i \cdot \mathbf{b}_j = 2\pi\,\delta_{ij}$$</p>
+<p>倒格子的<strong>第一布里渊区</strong>（First Brillouin Zone, BZ）是倒空间中距离原点最近的区域，它是 k 空间中的基本不可约单元。所有独立的电子态都可以用布里渊区内的 k 点来描述。</p>
+<h2 id="2-k">2. 为什么需要 k 点采样</h2>
+<p><strong>布洛赫定理</strong>指出，周期性势场中电子波函数可以写成：</p>
+<p>$$\psi_{n\mathbf{k}}(\mathbf{r}) = e^{i\mathbf{k}\cdot\mathbf{r}}\,u_{n\mathbf{k}}(\mathbf{r})$$</p>
+<p>其中 $u_{n\mathbf{k}}$ 具有晶格周期性。这意味着：<br />
+- 每个 <strong>k 点</strong> 独立求解一组薛定谔方程<br />
+- 总能量等物理量是对布里渊区内<strong>所有 k 点的积分</strong></p>
+<p>实际计算中我们无法对连续的 BZ 积分，必须选取一组<strong>离散的 k 点</strong>进行求和。k 点的选取直接决定了计算的精度和效率。</p>
+<h2 id="3-monkhorst-pack">3. Monkhorst-Pack 网格</h2>
+<p>最常用的 k 点采样方案是 <strong>Monkhorst-Pack (MP) 网格</strong>：在布里渊区的三个倒格矢方向上分别取均匀分布的 $N_1 \times N_2 \times N_3$ 个 k 点：</p>
+<p>$$\mathbf{k}_{ijk} = \frac{i}{N_1}\mathbf{b}_1 + \frac{j}{N_2}\mathbf{b}_2 + \frac{k}{N_3}\mathbf{b}_3$$</p>
+<p><strong>网格密度的选择原则：</strong><br />
+- <strong>金属体系</strong>：费米面附近的态对积分贡献大，需要较密的 k 网格（通常 12x12x12 以上）<br />
+- <strong>半导体/绝缘体</strong>：能带间隙使得积分收敛更快，较稀疏的网格即可（通常 4x4x4 到 8x8x8）<br />
+- <strong>表面/分子体系</strong>：非周期方向只需 1 个 k 点</p>
+<blockquote>
+<p><strong>经验值</strong>：Si 作为典型的半导体，ecutwfc=18 Ry 时，6x6x6 或 8x8x8 的 MP 网格通常足够收敛总能量至 ~1 meV/atom。</p>
+</blockquote>
+<h2 id="4-k_points">4. K_POINTS 卡的格式</h2>
+<p>QE 的 <code>K_POINTS</code> 卡支持多种格式，语法如下：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">K_POINTS</span><span class="w"> </span><span class="err">{</span><span class="n">option</span><span class="err">}</span>
+<span class="n">n</span>
+<span class="n">kx1</span><span class="w">  </span><span class="n">ky1</span><span class="w">  </span><span class="n">kz1</span><span class="w">  </span><span class="n">weight1</span>
+<span class="n">kx2</span><span class="w">  </span><span class="n">ky2</span><span class="w">  </span><span class="n">kz2</span><span class="w">  </span><span class="n">weight2</span>
+<span class="p">...</span>
+</code></pre></div>
+
+<h3 id="41">4.1 各格式详解</h3>
+<table>
+<thead>
+<tr>
+<th>格式</th>
+<th>关键字</th>
+<th>说明</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>automatic</code></td>
+<td><code>K_POINTS {automatic}</code></td>
+<td>自动生成 Monkhorst-Pack 网格，支持偏移</td>
+<td>绝大多数 SCF 计算</td>
+</tr>
+<tr>
+<td><code>gamma</code></td>
+<td><code>K_POINTS {Gamma}</code></td>
+<td>仅使用 Gamma 点 (k=0)</td>
+<td>分子、超胞、Gamma-only 计算</td>
+</tr>
+<tr>
+<td><code>crystal</code></td>
+<td><code>K_POINTS {crystal}</code></td>
+<td>手动指定 k 点，使用晶体坐标 (分数坐标)</td>
+<td>自定义 k 点采样</td>
+</tr>
+<tr>
+<td><code>tpiba</code></td>
+<td><code>K_POINTS {tpiba}</code></td>
+<td>手动指定 k 点，使用 $2\pi/a$ 为单位的笛卡尔坐标</td>
+<td>需要精确控制 k 点坐标</td>
+</tr>
+<tr>
+<td><code>crystal_b</code></td>
+<td><code>K_POINTS {crystal_b}</code></td>
+<td>沿高对称路径的 k 点，晶体坐标，权重=两点间点数</td>
+<td>能带结构计算</td>
+</tr>
+<tr>
+<td><code>tpiba_b</code></td>
+<td><code>K_POINTS {tpiba_b}</code></td>
+<td>同上，但使用 $2\pi/a$ 单位</td>
+<td>能带结构计算</td>
+</tr>
+<tr>
+<td><code>crystal_c</code></td>
+<td><code>K_POINTS {crystal_c}</code></td>
+<td>定义倒空间矩形区域的均匀网格</td>
+<td>等能面/费米面绘图</td>
+</tr>
+<tr>
+<td><code>tpiba_c</code></td>
+<td><code>K_POINTS {tpiba_c}</code></td>
+<td>同上，但使用 $2\pi/a$ 单位</td>
+<td>等能面/费米面绘图</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-automatic">4.2 automatic 格式语法</h3>
+<div class="codehilite"><pre><span></span><code>K_POINTS {automatic}
+nk1  nk2  nk3  shift1  shift2  shift3
+</code></pre></div>
+
+<ul>
+<li><code>nk1 nk2 nk3</code>：三个方向的 k 点数目</li>
+<li><code>shift1 shift2 shift3</code>：偏移量（0 或 1），控制网格是否偏离 Gamma 点</li>
+</ul>
+<h3 id="43-crystal_b">4.3 crystal_b 格式语法（能带计算）</h3>
+<div class="codehilite"><pre><span></span><code>K_POINTS {crystal_b}
+n_points
+kx1  ky1  kz1  n_seg1     ! 起点，n_seg1 为到下一点的分段数
+kx2  ky2  kz2  n_seg2     ! 经过的高对称点
+...
+kxn  kyn  kzn  0          ! 终点，权重为 0
+</code></pre></div>
+
+<h2 id="5-shift">5. 偏移（Shift）的作用</h2>
+<p>Monkhorst-Pack 网格的偏移参数（shift）控制网格是否包含 Gamma 点：</p>
+<table>
+<thead>
+<tr>
+<th>偏移</th>
+<th>网格特征</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0 0 0</code></td>
+<td>包含 Gamma 点</td>
+<td>网格包含 k=0，偶数网格时对称性较低</td>
+</tr>
+<tr>
+<td><code>1 1 1</code></td>
+<td>不含 Gamma 点</td>
+<td>偏移半个网格间距，对称性通常更高</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>建议</strong>：对于偶数网格（如 4x4x4、6x6x6），使用 <code>1 1 1</code> 偏移通常能更好地利用晶体对称性，减少不可约 k 点数。对于奇数网格，<code>0 0 0</code> 即可。实际差异通常很小。</p>
+</blockquote>
+<h2 id="6-k">6. 对称性与不可约 k 点</h2>
+<p>晶体的<strong>点群对称性</strong>使得布里渊区中许多 k 点是等价的。QE 会自动利用对称性将全布里渊区的 k 点约化为<strong>不可约布里渊区</strong>（IBZ）中的 k 点，从而大幅减少计算量。</p>
+<p>以 Si（Fd-3m，含 48 个对称操作）为例：<br />
+- 全 BZ: 8x8x8 = 512 个 k 点<br />
+- 不可约 BZ: 仅约 <strong>20</strong> 个 k 点</p>
+<p>输出文件中会显示 <code>number of k points=</code> 和对称性约化信息，帮助确认采样是否合理。</p>
+<h2 id="7-k">7. k 点收敛性测试</h2>
+<p>确定合适的 k 点密度是 DFT 计算的第一步。标准流程：</p>
+<div class="codehilite"><pre><span></span><code>对一系列递增的 MP 网格 (如 2x2x2 → 4x4x4 → ... → 10x10x10)：
+  1. 保持其他参数不变（截断能、赝势等）
+  2. 运行 SCF 计算
+  3. 提取总能量
+  4. 绘制 E(k网格) 曲线
+  5. 选择能量变化 &lt; 收敛阈值的最小网格
+</code></pre></div>
+
+<p>对于本章的练习，运行 <a href="chapters/03_k_sampling/scripts/k_convergence.sh"><code>scripts/k_convergence.sh</code></a> 脚本即可自动完成此流程。</p>
+<h2 id="8">8. 参数速查表</h2>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>类型</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>k_points</code></td>
+<td>character</td>
+<td><code>'gamma'</code></td>
+<td>k 点生成方式</td>
+</tr>
+<tr>
+<td><code>nk1, nk2, nk3</code></td>
+<td>integer</td>
+<td>0</td>
+<td>MP 网格各方向点数</td>
+</tr>
+<tr>
+<td><code>k1, k2, k3</code></td>
+<td>integer</td>
+<td>0</td>
+<td>偏移（0 或 1）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="9">9. 练习</h2>
+<ol>
+<li>运行 <code>inputs/</code> 中的各输入文件，比较不同 k 网格的总能量</li>
+<li>运行 <a href="chapters/03_k_sampling/scripts/k_convergence.sh"><code>scripts/k_convergence.sh</code></a> 自动化收敛性测试</li>
+<li>思考：为什么 Gamma 点计算对 Si 的总能量偏差很大？</li>
+</ol>
+<hr />
+<p><strong>下一章</strong>：<a href="chapters/03_k_sampling/../04_bands_and_dos/">第四章：能带结构与态密度</a></p>

@@ -1,0 +1,346 @@
+<h1 id="_1">第六章：结构优化与力学性质</h1>
+<h2 id="_2">概述</h2>
+<p>在实际计算中，实验测定的晶体结构往往不是 DFT 能量面的精确极小值。<strong>结构优化</strong>（Geometry Optimization / Relaxation）通过迭代调整原子位置和（可选的）晶格参数，使系统达到力学平衡状态——即所有原子受力趋近于零，应力张量趋近于零。这是几乎所有后续计算（声子谱、能带、分子动力学等）的前置步骤。</p>
+<hr />
+<h2 id="61-hellmann-feynman">6.1 Hellmann-Feynman 力定理</h2>
+<p>结构优化的物理基础是 <strong>Hellmann-Feynman 定理</strong>：一旦电子基态通过自洽场（SCF）求解完成，原子核所受的力只需对电子密度的静电势求导即可获得：</p>
+<p>$$
+\mathbf{F}_I = -\frac{\partial E}{\partial \mathbf{R}_I} = -Z_I \nabla_{\mathbf{R}_I} \int \frac{\rho(\mathbf{r})}{|\mathbf{r} - \mathbf{R}_I|} d\mathbf{r} + \text{其他贡献}
+$$</p>
+<p>其中 $\mathbf{R}_I$ 为第 $I$ 个原子的坐标，$Z_I$ 为其有效电荷。在平面波基组中，"其他贡献"还包括非局域赝势项、离子-离子库仑排斥项、以及交换关联势的贡献。</p>
+<p>Quantum ESPRESSO 在每次 SCF 收敛后自动计算并输出 <strong>force on each atom</strong>（单位：Ry/Bohr）。当所有原子上的力都足够小时，结构即达到力学平衡。</p>
+<hr />
+<h2 id="62">6.2 应力张量</h2>
+<p>对于周期性体系，除了原子力之外，晶格本身的形变也对应一个热力学驱动力——<strong>应力张量</strong> $\sigma_{\alpha\beta}$（stress tensor）。它是一个 $3 \times 3$ 的对称张量，描述单位面积上沿 $\beta$ 方向的面元所受的 $\alpha$ 方向的力。</p>
+<p>在 QE 中，应力以 <strong>kbar</strong> 为单位输出，且必须在输入中设置 <code>tstress = .true.</code> 才会计算。<strong>变晶格优化</strong>（vc-relax）正是通过最小化应力张量来同时优化晶格参数和原子位置。</p>
+<hr />
+<h2 id="63">6.3 结构优化类型</h2>
+<p>QE 的 <code>pw.x</code> 支持两种结构优化模式，通过 <code>calculation</code> 参数指定：</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th><code>calculation</code> 值</th>
+<th>优化对象</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>固定晶格优化</strong></td>
+<td><code>'relax'</code></td>
+<td>仅原子位置</td>
+<td>分子、表面吸附、已知晶格常数的晶体</td>
+</tr>
+<tr>
+<td><strong>变晶格优化</strong></td>
+<td><code>'vc-relax'</code></td>
+<td>原子位置 + 晶格参数</td>
+<td>未知晶格常数、高压/低压研究、弹性常数</td>
+</tr>
+</tbody>
+</table>
+<h3 id="631-relax">6.3.1 relax（固定晶格）</h3>
+<ul>
+<li>晶胞形状和体积保持不变</li>
+<li>只优化 <code>ATOMIC_POSITIONS</code> 中的原子坐标</li>
+<li>每步 SCF 后计算 Hellmann-Feynman 力，通过 BFGS 更新原子位置</li>
+<li>收敛判据：所有原子受力 &lt; <code>forc_conv_thr</code></li>
+</ul>
+<h3 id="632-vc-relax">6.3.2 vc-relax（变晶格）</h3>
+<ul>
+<li>同时优化原子位置和晶格参数（<code>CELL_PARAMETERS</code>）</li>
+<li>需要计算应力张量（自动开启 <code>tstress</code>）</li>
+<li>每步包含一个 SCF 计算 + 力/应力的双重优化</li>
+<li>可通过 <code>&amp;CELL</code> 中的 <code>press</code> 参数设定外部压力（等压优化）</li>
+<li>收敛判据需同时满足力和能量的阈值</li>
+</ul>
+<hr />
+<h2 id="64-bfgs">6.4 BFGS 优化算法</h2>
+<p>QE 的默认优化算法是 <strong>BFGS</strong>（Broyden-Fletcher-Goldfarb-Shanno），一种拟牛顿方法：</p>
+<ol>
+<li>从当前构型出发，计算力（梯度）和 Hessian 矩阵的近似</li>
+<li>沿搜索方向 $\mathbf{d} = -\mathbf{H}^{-1} \cdot \mathbf{g}$（$\mathbf{H}$ 为近似 Hessian，$\mathbf{g}$ 为力向量）进行线搜索</li>
+<li>根据新旧梯度的差更新 Hessian 近似</li>
+<li>重复直到收敛</li>
+</ol>
+<p>BFGS 的优点是<strong>超线性收敛</strong>，对初始 Hessian 不敏感。QE 在首次迭代中使用一个经验初始 Hessian，随后逐步更新。</p>
+<p><strong>关键参数</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ion_dynamics</code></td>
+<td><code>'bfgs'</code></td>
+<td>离子优化算法。可选 <code>'bfgs'</code>、<code>'damp'</code>、<code>'fire'</code></td>
+</tr>
+<tr>
+<td><code>trust_radius_max</code></td>
+<td>0.8 Bohr</td>
+<td>线搜索的最大步长</td>
+</tr>
+<tr>
+<td><code>trust_radius_min</code></td>
+<td>1.0d-4 Bohr</td>
+<td>线搜索的最小步长</td>
+</tr>
+<tr>
+<td><code>trust_radius_ini</code></td>
+<td>0.5 Bohr</td>
+<td>初始信任半径</td>
+</tr>
+<tr>
+<td><code>w_1</code></td>
+<td>0.01</td>
+<td>线搜索中的 Wolfe 条件参数</td>
+</tr>
+<tr>
+<td><code>w_2</code></td>
+<td>0.5</td>
+<td>线搜索中的 Wolfe 条件参数</td>
+</tr>
+<tr>
+<td><code>bfgs_ndim</code></td>
+<td>1</td>
+<td>BFGS 更新所用的历史步数（&gt;1 为 L-BFGS）</td>
+</tr>
+<tr>
+<td><code>upscale</code></td>
+<td>10.0</td>
+<td>能量不再下降时，将电子收敛阈值放大的倍数</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>提示</strong>：对于较难收敛的体系，可将 <code>bfgs_ndim</code> 设为 5~7 以使用有限内存 BFGS，或切换为 <code>ion_dynamics = 'fire'</code>（FIRE 算法）。</p>
+</blockquote>
+<hr />
+<h2 id="65-cell-namelist">6.5 &amp;CELL namelist 参数详解</h2>
+<p><code>&amp;CELL</code> namelist 仅在 <code>calculation = 'vc-relax'</code> 时生效，控制晶格优化行为：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cell_dynamics</code></td>
+<td><code>'none'</code></td>
+<td>晶格优化算法。常用 <code>'bfgs'</code>（推荐）或 <code>'damp-w'</code>（Wentzcovitch 阻尼动力学）</td>
+</tr>
+<tr>
+<td><code>press</code></td>
+<td>0.0 kbar</td>
+<td>目标外部压力</td>
+</tr>
+<tr>
+<td><code>wmass</code></td>
+<td>自动计算</td>
+<td>晶格自由度的"虚拟质量"。阻尼动力学中控制收敛速度</td>
+</tr>
+<tr>
+<td><code>cell_factor</code></td>
+<td>1.2</td>
+<td>FFT 网格安全因子。晶格变化较大时需增大此值（如 1.5~2.0）</td>
+</tr>
+<tr>
+<td><code>press_conv_thr</code></td>
+<td>0.5 kbar</td>
+<td>压力收敛阈值</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>注意</strong>：<code>cell_dynamics = 'bfgs'</code> 是 QE 7.0 中 vc-relax 的推荐选项，比旧版的 <code>'damp-w'</code> 收敛更快更稳定。</p>
+</blockquote>
+<hr />
+<h2 id="66">6.6 收敛判据</h2>
+<p>结构优化的收敛需要同时满足以下条件：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>默认值</th>
+<th>位置</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>forc_conv_thr</code></td>
+<td>1.0d-4 Ry/Bohr</td>
+<td><code>&amp;CONTROL</code></td>
+<td>最大残余力的阈值。越小精度越高，但步数越多</td>
+</tr>
+<tr>
+<td><code>etot_conv_thr</code></td>
+<td>1.0d-4 Ry</td>
+<td><code>&amp;CONTROL</code></td>
+<td>相邻两步能量变化的阈值</td>
+</tr>
+<tr>
+<td><code>nstep</code></td>
+<td>50</td>
+<td><code>&amp;CONTROL</code>（relax）/ <code>&amp;IONS</code>（vc-relax）</td>
+<td>最大离子步数</td>
+</tr>
+</tbody>
+</table>
+<p><strong>典型取值建议</strong>：</p>
+<ul>
+<li><strong>常规结构优化</strong>：<code>forc_conv_thr = 1.0d-4</code>，<code>etot_conv_thr = 1.0d-5</code></li>
+<li><strong>高精度</strong>（如声子前的优化）：<code>forc_conv_thr = 1.0d-5</code>，<code>etot_conv_thr = 1.0d-6</code></li>
+<li><strong>粗略搜索</strong>：<code>forc_conv_thr = 1.0d-3</code>，<code>etot_conv_thr = 1.0d-4</code></li>
+</ul>
+<blockquote>
+<p><strong>重要</strong>：<code>etot_conv_thr</code> 是相邻两步之间的能量差，不是绝对能量。它与电子自洽的 <code>conv_thr</code> 是不同的概念。</p>
+</blockquote>
+<hr />
+<h2 id="67-ibrav-cell_parameters">6.7 ibrav 与 CELL_PARAMETERS 的关系</h2>
+<p><code>ibrav</code> 是 QE 中定义晶格类型的快捷方式：</p>
+<table>
+<thead>
+<tr>
+<th><code>ibrav</code></th>
+<th>晶格类型</th>
+<th>自由参数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>简立方 (SC)</td>
+<td><code>celldm(1)</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>面心立方 (FCC)</td>
+<td><code>celldm(1)</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>体心立方 (BCC)</td>
+<td><code>celldm(1)</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>六方 (Hexagonal)</td>
+<td><code>celldm(1)</code>, <code>celldm(3)</code></td>
+</tr>
+<tr>
+<td>0</td>
+<td><strong>通用</strong></td>
+<td>需提供 <code>CELL_PARAMETERS</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键规则</strong>：</p>
+<ul>
+<li><strong><code>relax</code> 模式</strong>：<code>ibrav</code> 可以非零（晶格固定），也可以为 0（配合 <code>CELL_PARAMETERS</code>，但晶格仍不优化）</li>
+<li><strong><code>vc-relax</code> 模式</strong>：<strong>必须设置 <code>ibrav = 0</code></strong>，并显式提供 <code>CELL_PARAMETERS</code>，因为优化器需要直接操作晶格矢量</li>
+<li><code>ibrav != 0</code> 时，<code>CELL_PARAMETERS</code> 不应出现在输入中（由 <code>celldm</code> 自动生成）</li>
+<li><code>ibrav = 0</code> 时，<code>CELL_PARAMETERS</code> <strong>必须</strong>出现，单位可以是 <code>bohr</code>、<code>angstrom</code> 或 <code>alat</code></li>
+</ul>
+<blockquote>
+<p><strong>最佳实践</strong>：在 vc-relax 之前，先用 <code>relax</code> 预优化原子位置（固定实验晶格参数），再进行全优化，以避免初始应力过大导致的收敛问题。</p>
+</blockquote>
+<hr />
+<h2 id="68">6.8 实际操作注意事项</h2>
+<h3 id="_3">初始结构选择</h3>
+<ol>
+<li><strong>优先使用实验值</strong>：初始晶格参数取自 XRD 或文献，通常在 DFT 平衡值附近 1~2% 以内</li>
+<li><strong>先做 scf 测试</strong>：在放松结构之前，先用实验结构做一次 SCF，检查力和应力的量级</li>
+<li><strong>先 relax 再 vc-relax</strong>：先固定晶格优化原子位置，再放开晶格，可减少 vc-relax 的步数</li>
+</ol>
+<h3 id="_4">收敛困难的处理</h3>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>原因</th>
+<th>解决方案</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>力震荡不下降</td>
+<td>步长过大或 Hessian 不准确</td>
+<td>减小 <code>trust_radius_max</code>（如 0.1~0.3）</td>
+</tr>
+<tr>
+<td>能量上升后才下降</td>
+<td>初始结构远离极小值</td>
+<td>使用更合理的初始构型，或先用 <code>ion_dynamics = 'fire'</code></td>
+</tr>
+<tr>
+<td>vc-relax 不收敛</td>
+<td>晶格变化过大</td>
+<td>增大 <code>cell_factor</code>（如 1.5~2.0），减小 <code>trust_radius_max</code></td>
+</tr>
+<tr>
+<td>达到最大步数仍未收敛</td>
+<td>体系复杂或阈值过严</td>
+<td>适当放宽 <code>forc_conv_thr</code>，或增大 <code>nstep</code></td>
+</tr>
+<tr>
+<td>对称性报错</td>
+<td>优化中晶体对称性降低</td>
+<td>设置 <code>nosym = .true.</code> 或检查初始结构对称性</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_5">从优化结果提取后续计算的结构</h3>
+<p>优化完成后，输出文件末尾会打印最终的晶格参数和原子坐标。可直接从输出中提取：</p>
+<div class="codehilite"><pre><span></span><code>Begin final coordinates
+     new unit-cell volume = ...
+CELL_PARAMETERS (angstrom)
+   ...
+ATOMIC_POSITIONS (angstrom)
+   ...
+End final coordinates
+</code></pre></div>
+
+<p>将这些内容复制到下一步计算的输入文件中即可。</p>
+<hr />
+<h2 id="69">6.9 输入文件示例</h2>
+<p>本章提供三个输入文件：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="chapters/06_structural_optimization/inputs/si_relax.in"><code>inputs/si_relax.in</code></a></td>
+<td>Si 晶体固定晶格优化（relax）</td>
+</tr>
+<tr>
+<td><a href="chapters/06_structural_optimization/inputs/si_vc_relax.in"><code>inputs/si_vc_relax.in</code></a></td>
+<td>Si 晶体变晶格优化（vc-relax）</td>
+</tr>
+<tr>
+<td><a href="chapters/06_structural_optimization/inputs/h2o_relax.in"><code>inputs/h2o_relax.in</code></a></td>
+<td>H₂O 分子结构优化（大晶胞，relax）</td>
+</tr>
+</tbody>
+</table>
+<p>工作流脚本 <a href="chapters/06_structural_optimization/scripts/relax_workflow.sh"><code>scripts/relax_workflow.sh</code></a> 演示了完整的 relax -&gt; vc-relax 两步优化流程。</p>
+<hr />
+<h2 id="610">6.10 练习</h2>
+<ol>
+<li>运行 <a href="chapters/06_structural_optimization/inputs/si_relax.in"><code>si_relax.in</code></a>，观察每步的力和能量变化，比较收敛前后的原子坐标</li>
+<li>运行 <a href="chapters/06_structural_optimization/inputs/si_vc_relax.in"><code>si_vc_relax.in</code></a>，对比优化前后的晶格常数与实验值（$a = 5.431$ Å）的差异</li>
+<li>修改 <a href="chapters/06_structural_optimization/inputs/si_vc_relax.in"><code>si_vc_relax.in</code></a> 中的 <code>press</code> 参数为 100 kbar 和 500 kbar，观察晶格常数的变化趋势</li>
+<li>对 <a href="chapters/06_structural_optimization/inputs/h2o_relax.in"><code>h2o_relax.in</code></a>，检查优化后的 O-H 键长和 H-O-H 键角，与实验值（$d_{OH} = 0.958$ Å, $\angle_{HOH} = 104.5°$）对比</li>
+</ol>

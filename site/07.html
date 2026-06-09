@@ -1,0 +1,312 @@
+<h1 id="_1">第七章：磁性与自旋极化计算</h1>
+<h2 id="71-dft">7.1 自旋极化 DFT 基础</h2>
+<p>在标准 DFT 中，电子密度 $\rho(\mathbf{r})$ 是唯一的基本变量。<strong>自旋极化 DFT</strong>（Spin-Polarized DFT）将电子密度扩展为两个分量：</p>
+<p>$$\rho(\mathbf{r}) = \rho_\uparrow(\mathbf{r}) + \rho_\downarrow(\mathbf{r})$$</p>
+<p><strong>自旋密度</strong>定义为：</p>
+<p>$$m(\mathbf{r}) = \rho_\uparrow(\mathbf{r}) - \rho_\downarrow(\mathbf{r})$$</p>
+<p>当 $m(\mathbf{r}) \neq 0$ 时，系统具有<strong>净磁矩</strong>。自旋向上和自旋向下的 Kohn-Sham 本征值不同，这种现象称为<strong>交换劈裂</strong>（exchange splitting），是磁性材料能带结构的关键特征。</p>
+<blockquote>
+<p><strong>何时需要自旋极化计算？</strong> 含有过渡金属（Fe, Co, Ni）、稀土元素、自由基或开壳层分子的体系，通常都需要 <code>nspin=2</code>。</p>
+</blockquote>
+<hr />
+<h2 id="72">7.2 核心参数详解</h2>
+<h3 id="nspin"><code>nspin</code> — 自旋模式</h3>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1</code></td>
+<td><strong>非自旋极化</strong>（默认），自旋简并</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><strong>共线磁性</strong>（collinear），自旋向上/向下分别计算</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td><strong>非共线磁性</strong>（noncollinear），需配合 <code>noncolin=.true.</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="starting_magnetization"><code>starting_magnetization</code> — 初始磁矩</h3>
+<p>该参数为每种原子类型设定<strong>初始自旋极化度</strong>，取值范围 $[-1, 1]$：</p>
+<p>$$\text{starting\_magnetization} = \frac{N_\uparrow - N_\downarrow}{N_\uparrow + N_\downarrow}$$</p>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0.7</code></td>
+<td>每个 Ni 原子初始自旋极化度 70%（适合 Ni）</td>
+</tr>
+<tr>
+<td><code>0.5</code></td>
+<td>适合 Fe、Co 等</td>
+</tr>
+<tr>
+<td><code>0.0</code></td>
+<td>无初始磁矩（非磁性原子）</td>
+</tr>
+<tr>
+<td>负值</td>
+<td>反铁磁排列中原子的反向磁矩</td>
+</tr>
+</tbody>
+</table>
+<p><strong>设置策略</strong>：<br />
+- <strong>铁磁（FM）</strong>：所有同类原子设置相同的正 <code>starting_magnetization</code><br />
+- <strong>反铁磁（AFM）</strong>：同种原子通过不同 <code>ATOMIC_SPECIES</code> 标签区分，分别设置正、负初始磁矩<br />
+- 初始值只需"大致合理"，SCF 自洽后磁矩会收敛到物理正确值<br />
+- 初始值过小可能导致收敛到非磁性亚稳态</p>
+<hr />
+<h2 id="73-fm">7.3 铁磁（FM）计算示例</h2>
+<p>以 <strong>fcc Ni</strong> 铁磁态为例，关键设置如下：</p>
+<div class="codehilite"><pre><span></span><code><span class="p">&amp;</span><span class="nb">system</span>
+<span class="nb">    </span><span class="n">ibrav</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="n">celldm</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">6.48</span><span class="p">,</span>
+<span class="w">    </span><span class="n">nat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">ntyp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ecutwfc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="mf">4.0</span><span class="p">,</span><span class="w"> </span><span class="n">ecutrho</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">28</span><span class="mf">8.0</span><span class="p">,</span>
+<span class="w">    </span><span class="n">nspin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">    </span><span class="n">starting_magnetization</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.7</span><span class="p">,</span>
+<span class="w">    </span><span class="n">occupations</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;smearing&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">smearing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;mv&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">degauss</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.02</span><span class="p">,</span>
+<span class="o">/</span>
+</code></pre></div>
+
+<blockquote>
+<p>详细输入文件见 <a href="chapters/07_magnetism/inputs/ni_fm_scf.in"><code>inputs/ni_fm_scf.in</code></a>。</p>
+</blockquote>
+<hr />
+<h2 id="74-afm">7.4 反铁磁（AFM）计算设置</h2>
+<p>对于反铁磁体系（如 NiO），关键技巧是将<strong>化学等价但磁性不等价</strong>的原子定义为不同原子类型：</p>
+<div class="codehilite"><pre><span></span><code><span class="p">&amp;</span><span class="nb">system</span>
+<span class="nb">    </span><span class="n">ntyp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="c">! Ni_up, Ni_down, O</span>
+<span class="w">    </span><span class="n">nat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">    </span><span class="n">nspin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">    </span><span class="n">starting_magnetization</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w">  </span><span class="mf">0.5</span><span class="p">,</span><span class="w">   </span><span class="c">! Ni_up</span>
+<span class="w">    </span><span class="n">starting_magnetization</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="mf">0.5</span><span class="p">,</span><span class="w">   </span><span class="c">! Ni_down</span>
+<span class="w">    </span><span class="n">starting_magnetization</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w">  </span><span class="mf">0.0</span><span class="p">,</span><span class="w">   </span><span class="c">! O</span>
+<span class="o">/</span>
+<span class="n">ATOMIC_SPECIES</span>
+<span class="w"> </span><span class="n">Ni_up</span><span class="w">  </span><span class="mi">5</span><span class="mf">8.69</span><span class="w">  </span><span class="n">Ni</span><span class="p">.</span><span class="n">pz</span><span class="o">-</span><span class="n">nd</span><span class="o">-</span><span class="n">rrkjus</span><span class="p">.</span><span class="n">UPF</span>
+<span class="w"> </span><span class="n">Ni_dn</span><span class="w">  </span><span class="mi">5</span><span class="mf">8.69</span><span class="w">  </span><span class="n">Ni</span><span class="p">.</span><span class="n">pz</span><span class="o">-</span><span class="n">nd</span><span class="o">-</span><span class="n">rrkjus</span><span class="p">.</span><span class="n">UPF</span>
+<span class="w"> </span><span class="n">O</span><span class="w">      </span><span class="mi">1</span><span class="mf">6.00</span><span class="w">  </span><span class="n">O</span><span class="p">.</span><span class="n">pbe</span><span class="o">-</span><span class="n">rrkjus</span><span class="p">.</span><span class="n">UPF</span>
+</code></pre></div>
+
+<p>两种 Ni 原子共享同一赝势文件，但通过不同的标签与初始磁矩区分自旋方向。</p>
+<hr />
+<h2 id="75-fe-bcc">7.5 Fe 铁磁 bcc 计算</h2>
+<p><strong>bcc Fe</strong> 是磁性计算的经典测试体系：</p>
+<div class="codehilite"><pre><span></span><code><span class="p">&amp;</span><span class="nb">system</span>
+<span class="nb">    </span><span class="n">ibrav</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="n">celldm</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">5.40</span><span class="p">,</span>
+<span class="w">    </span><span class="n">nat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">ntyp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ecutwfc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="mf">5.0</span><span class="p">,</span><span class="w"> </span><span class="n">ecutrho</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">25</span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">    </span><span class="n">nspin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">    </span><span class="n">starting_magnetization</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span>
+<span class="w">    </span><span class="n">occupations</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;smearing&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">smearing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;mv&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">degauss</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.02</span><span class="p">,</span>
+<span class="o">/</span>
+</code></pre></div>
+
+<blockquote>
+<p>详细输入文件见 <a href="chapters/07_magnetism/inputs/fe_fm_scf.in"><code>inputs/fe_fm_scf.in</code></a>。</p>
+</blockquote>
+<hr />
+<h2 id="76">7.6 磁矩输出解读</h2>
+<p>SCF 计算完成后，输出文件中会出现两行关键信息：</p>
+<div class="codehilite"><pre><span></span><code>total magnetization       =    0.63 Bohr mag/cell
+absolute magnetization    =    0.63 Bohr mag/cell
+</code></pre></div>
+
+<table>
+<thead>
+<tr>
+<th>物理量</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>total magnetization</strong></td>
+<td>$\int (\rho_\uparrow - \rho_\downarrow) d\mathbf{r}$，总磁矩，可为正或负</td>
+</tr>
+<tr>
+<td><strong>absolute magnetization</strong></td>
+<td>$\int |\rho_\uparrow - \rho_\downarrow| d\mathbf{r}$，绝对磁矩，始终非负</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>铁磁态：两者相等</li>
+<li>反铁磁态：total $\approx 0$，absolute 仍为有限值</li>
+<li>单位为 <strong>Bohr 磁子/原胞</strong>（Bohr mag/cell）</li>
+</ul>
+<p>每种原子的磁矩可通过 Bader 分布或投影态密度进一步分解。</p>
+<hr />
+<h2 id="77">7.7 非共线磁性与自旋轨道耦合</h2>
+<h3 id="noncollinear-magnetism">非共线磁性（Noncollinear Magnetism）</h3>
+<p>在真实材料中，磁矩方向不一定平行排列。<strong>非共线磁性</strong>允许每个原子的磁矩指向任意方向：</p>
+<div class="codehilite"><pre><span></span><code><span class="p">&amp;</span><span class="nb">system</span>
+<span class="nb">    </span><span class="n">noncolin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.</span><span class="n">true</span><span class="p">.,</span>
+<span class="w">    </span><span class="n">starting_magnetization</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span>
+<span class="w">    </span><span class="n">angle1</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">9</span><span class="mf">0.0</span><span class="p">,</span><span class="w">    </span><span class="c">! 极角（与 z 轴夹角）</span>
+<span class="w">    </span><span class="n">angle2</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w">  </span><span class="mf">0.0</span><span class="p">,</span><span class="w">    </span><span class="c">! 方位角（在 xy 平面内）</span>
+<span class="o">/</span>
+</code></pre></div>
+
+<h3 id="soc">自旋轨道耦合（SOC）</h3>
+<p><strong>自旋轨道耦合</strong>（Spin-Orbit Coupling）是自旋与轨道角动量之间的相对论性相互作用，对于以下情况至关重要：</p>
+<ul>
+<li><strong>磁晶各向异性能</strong>（Magnetic Anisotropy Energy, MAE）</li>
+<li><strong>拓扑绝缘体</strong>、<strong>Rashba 效应</strong></li>
+<li>重元素体系（5d、4f 电子）</li>
+</ul>
+<div class="codehilite"><pre><span></span><code><span class="p">&amp;</span><span class="nb">system</span>
+<span class="nb">    </span><span class="n">noncolin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.</span><span class="n">true</span><span class="p">.,</span>
+<span class="w">    </span><span class="n">lspinorb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.</span><span class="n">true</span><span class="p">.,</span>
+<span class="w">    </span><span class="n">starting_magnetization</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span>
+<span class="o">/</span>
+</code></pre></div>
+
+<blockquote>
+<p><strong>注意</strong>：SOC 计算必须使用<strong>全电子势</strong>或包含 SOC 信息的赝势。标准标量相对论赝势不能直接用于 SOC 计算。计算量约为普通自旋极化的 <strong>4 倍</strong>。</p>
+</blockquote>
+<hr />
+<h2 id="78">7.8 展宽方法对磁性计算的影响</h2>
+<p>金属体系的磁性计算对<strong>展宽方法</strong>（smearing）特别敏感：</p>
+<table>
+<thead>
+<tr>
+<th>展宽方法</th>
+<th><code>smearing</code></th>
+<th>对磁性的影响</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Methfessel-Paxton</td>
+<td><code>'mp'</code></td>
+<td>高阶展宽，对力和应力精度高，磁性计算推荐</td>
+</tr>
+<tr>
+<td>Marzari-Vanderbilt</td>
+<td><code>'mv'</code></td>
+<td>冷展宽，对总能和磁矩较好，推荐用于磁性</td>
+</tr>
+<tr>
+<td>Fermi-Dirac</td>
+<td><code>'fd'</code></td>
+<td>有明确物理温度含义，适合有限温度模拟</td>
+</tr>
+<tr>
+<td>Gaussian</td>
+<td><code>'gaussian'</code></td>
+<td>简单但收敛慢，磁矩可能偏大</td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键建议</strong>：<br />
+- <code>deaussa</code> 值不宜过大（建议 0.01-0.05 Ry），否则会人为展宽态密度，影响磁矩<br />
+- 不同展宽方法下 <code>degauss</code> 的含义不同，不可直接比较<br />
+- 磁性计算建议先用较大 <code>degauss</code> 快速收敛，再逐步减小到 0.01-0.02 Ry 精确计算</p>
+<hr />
+<h2 id="79">7.9 参数速查表</h2>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>类型</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nspin</code></td>
+<td>INTEGER</td>
+<td><code>1</code></td>
+<td>1=非极化, 2=共线, 4=非共线</td>
+</tr>
+<tr>
+<td><code>starting_magnetization(i)</code></td>
+<td>REAL</td>
+<td><code>0.0</code></td>
+<td>第 i 类原子的初始磁极化度 [-1,1]</td>
+</tr>
+<tr>
+<td><code>noncolin</code></td>
+<td>LOGICAL</td>
+<td><code>.false.</code></td>
+<td>非共线磁性开关</td>
+</tr>
+<tr>
+<td><code>lspinorb</code></td>
+<td>LOGICAL</td>
+<td><code>.false.</code></td>
+<td>自旋轨道耦合开关</td>
+</tr>
+<tr>
+<td><code>angle1(i)</code></td>
+<td>REAL</td>
+<td><code>0.0</code></td>
+<td>非共线模式下第 i 类原子磁矩极角（度）</td>
+</tr>
+<tr>
+<td><code>angle2(i)</code></td>
+<td>REAL</td>
+<td><code>0.0</code></td>
+<td>非共线模式下第 i 类原子磁矩方位角（度）</td>
+</tr>
+<tr>
+<td><code>report</code></td>
+<td>INTEGER</td>
+<td><code>0</code></td>
+<td>&gt;0 时输出每原子投影磁矩</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="710">7.10 计算流程概览</h2>
+<div class="codehilite"><pre><span></span><code><span class="mf">1.</span><span class="w"> </span><span class="n">结构建模</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="mf">2.</span><span class="w"> </span><span class="n">设置</span><span class="w"> </span><span class="n">nspin</span><span class="o">=</span><span class="mf">2</span><span class="w"> </span><span class="n">与</span><span class="w"> </span><span class="n">starting_magnetization</span>
+<span class="w">     </span><span class="err">→</span><span class="w"> </span><span class="mf">3.</span><span class="w"> </span><span class="n">SCF</span><span class="w"> </span><span class="n">自洽</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="mf">4.</span><span class="w"> </span><span class="n">检查</span><span class="w"> </span><span class="kr">to</span><span class="n">tal</span><span class="o">/</span><span class="nb">abs</span><span class="n">olute</span><span class="w"> </span><span class="n">magnetization</span>
+<span class="w">     </span><span class="err">→</span><span class="w"> </span><span class="mf">5.</span><span class="w"> </span><span class="err">（</span><span class="n">可选</span><span class="err">）</span><span class="n">能带</span><span class="o">/</span><span class="n">态密度</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="mf">6.</span><span class="w"> </span><span class="err">（</span><span class="n">可选</span><span class="err">）</span><span class="n">非共线</span><span class="o">/</span><span class="n">SOC</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_2">文件索引</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="chapters/07_magnetism/inputs/ni_fm_scf.in"><code>inputs/ni_fm_scf.in</code></a></td>
+<td>Ni fcc 铁磁 SCF 计算</td>
+</tr>
+<tr>
+<td><a href="chapters/07_magnetism/inputs/ni_fm_bands.in"><code>inputs/ni_fm_bands.in</code></a></td>
+<td>Ni 铁磁能带计算</td>
+</tr>
+<tr>
+<td><a href="chapters/07_magnetism/inputs/ni_bands.pp.in"><code>inputs/ni_bands.pp.in</code></a></td>
+<td>bands.x 能带后处理</td>
+</tr>
+<tr>
+<td><a href="chapters/07_magnetism/inputs/fe_fm_scf.in"><code>inputs/fe_fm_scf.in</code></a></td>
+<td>Fe bcc 铁磁 SCF 计算</td>
+</tr>
+<tr>
+<td><a href="chapters/07_magnetism/scripts/magnetism_workflow.sh"><code>scripts/magnetism_workflow.sh</code></a></td>
+<td>完整磁性计算工作流脚本</td>
+</tr>
+</tbody>
+</table>

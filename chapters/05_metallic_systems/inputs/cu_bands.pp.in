@@ -1,0 +1,9 @@
+# bands.x 后处理 — Cu 能带
+# 从 pw.x 的 bands 计算结果中提取能带数据
+# Cu 的 d 电子在费米面附近形成复杂能带结构
+
+ &bands
+    prefix  = 'cu'
+    outdir  = './tmp/'
+    filband = 'cu_bands.dat'
+ /

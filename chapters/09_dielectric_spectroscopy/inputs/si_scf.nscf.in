@@ -1,0 +1,42 @@
+###############################################################################
+#  Si — NSCF 计算（用于 epsilon.x 介电函数计算）
+#
+#  物理背景：
+#    epsilon.x 需要比 SCF 更多的空带（conduction bands）来描述光学跃迁
+#    nbnd 应设为足够大（通常 4-8 倍于占据带数）
+#    使用较密的 k 网格以获得平滑的介电函数
+###############################################################################
+
+&CONTROL
+  calculation = 'nscf'
+  prefix      = 'silicon'
+  pseudo_dir   = '/home/faust/qe-7.0/pseudo/'
+  outdir      = './tmp/'
+/
+
+&SYSTEM
+  ibrav     = 2
+  celldm(1) = 10.2612       ! Si 晶格参数 (Bohr)
+  nat       = 2
+  ntyp      = 1
+  ecutwfc   = 30.0
+  nbnd      = 32            ! 增加能带数（SCF 默认 4 个占据带，这里取 32 个）
+  occupations = 'fixed'
+  nosym     = .TRUE.        ! 必须：epsilon.x 要求均匀 k 网格
+  noinv     = .TRUE.        ! 禁用时间反演对称性，确保完整 k 网格
+/
+
+&ELECTRONS
+  conv_thr    = 1.0D-10
+  mixing_beta = 0.7
+/
+
+ATOMIC_SPECIES
+  Si  28.086  Si.pz-vbc.UPF
+
+ATOMIC_POSITIONS {crystal}
+  Si  0.00  0.00  0.00
+  Si  0.25  0.25  0.25
+
+K_POINTS {automatic}
+  8   8   8  0  0  0        ! k 网格（需搭配 nosym+noinv 保证均匀权重）

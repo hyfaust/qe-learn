@@ -1,0 +1,296 @@
+<h1 id="_1">第十二章：综合实战与自动化</h1>
+<h2 id="121-gaas">12.1 综合项目：从零完成 GaAs 的完整表征</h2>
+<p>本章以 <strong>GaAs（砷化镓）</strong> 为例，演示从结构优化到声子计算的完整工作流。GaAs 是典型的 III-V 族直接带隙半导体，闪锌矿结构（空间群 F-43m），广泛用于光电子器件。</p>
+<h3 id="1211">12.1.1 工作流程总览</h3>
+<div class="codehilite"><pre><span></span><code>结构优化 → 收敛测试 → SCF → 能带+DOS → 声子 → 热力学性质
+(relax)   (ecutwfc)  (scf)  (bands/dos)  (ph)   (thermodynamics)
+</code></pre></div>
+
+<table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>计算类型</th>
+<th>关键输出</th>
+<th>参考文件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>relax</code></td>
+<td>优化后的晶格常数、原子位置</td>
+<td><a href="chapters/12_automation_capstone/inputs/gaas_relax.in"><code>gaas_relax.in</code></a></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>scf</code>（多次）</td>
+<td>E vs ecutwfc 收敛曲线</td>
+<td>见脚本</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>scf</code></td>
+<td>基态总能量、电荷密度</td>
+<td><a href="chapters/12_automation_capstone/inputs/gaas_scf.in"><code>gaas_scf.in</code></a></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>bands</code></td>
+<td>能带结构、带隙</td>
+<td><a href="chapters/12_automation_capstone/inputs/gaas_bands.in"><code>gaas_bands.in</code></a></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>ph.x</code></td>
+<td>声子频率、热力学量</td>
+<td>见脚本</td>
+</tr>
+</tbody>
+</table>
+<h3 id="1212">12.1.2 关键参数选择</h3>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>推荐值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ecutwfc</strong></td>
+<td>50 Ry</td>
+<td>收敛测试后确定</td>
+</tr>
+<tr>
+<td><strong>ecutrho</strong></td>
+<td>400 Ry</td>
+<td>PAW 赝势通常取 ecutwfc 的 8 倍</td>
+</tr>
+<tr>
+<td><strong>k 点</strong></td>
+<td>8x8x8</td>
+<td>SCF/DOS 计算</td>
+</tr>
+<tr>
+<td><strong>conv_thr</strong></td>
+<td>1.0d-8</td>
+<td>电子收敛阈值</td>
+</tr>
+<tr>
+<td><strong>smearing</strong></td>
+<td>gaussian, 0.01</td>
+<td>GaAs 为半导体，退化很小</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="122-python-qe">12.2 Python 自动化 QE 计算</h2>
+<p>手动编辑大量输入文件容易出错且效率低下。下面介绍如何用 Python 实现自动化。</p>
+<h3 id="1221">12.2.1 生成输入文件（字符串模板）</h3>
+<p>使用 Python 的 <code>string.Template</code> 将参数从输入文件中分离：</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">string</span> <span class="kn">import</span> <span class="n">Template</span>
+
+<span class="n">SCF_TEMPLATE</span> <span class="o">=</span> <span class="n">Template</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">&amp;CONTROL</span>
+<span class="s2">  calculation = &#39;scf&#39;</span>
+<span class="s2">  prefix = &#39;$</span><span class="si">{prefix}</span><span class="s2">&#39;</span>
+<span class="s2">  outdir = &#39;./tmp&#39;</span>
+<span class="s2">  pseudo_dir = &#39;$</span><span class="si">{pseudo_dir}</span><span class="s2">&#39;</span>
+<span class="s2">/</span>
+<span class="s2">&amp;SYSTEM</span>
+<span class="s2">  ibrav = $</span><span class="si">{ibrav}</span>
+<span class="s2">  celldm(1) = $</span><span class="si">{celldm1}</span>
+<span class="s2">  ecutwfc = $</span><span class="si">{ecutwfc}</span>
+<span class="s2">  ...</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+<span class="c1"># 用法:</span>
+<span class="n">content</span> <span class="o">=</span> <span class="n">SCF_TEMPLATE</span><span class="o">.</span><span class="n">substitute</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;gaas&quot;</span><span class="p">,</span> <span class="n">ecutwfc</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</code></pre></div>
+
+<p>完整实现见 <a href="chapters/12_automation_capstone/scripts/generate_inputs.py"><code>scripts/generate_inputs.py</code></a>，可批量生成不同截断能的输入文件。</p>
+<h3 id="1222">12.2.2 解析输出文件</h3>
+<p>pw.x 输出是结构化文本，用<strong>正则表达式</strong>提取关键物理量：</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">re</span>
+
+<span class="k">def</span> <span class="nf">parse_energy</span><span class="p">(</span><span class="n">output</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;从 pw.x 输出中提取总能量 (Ry)。&quot;&quot;&quot;</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;!\s+total energy\s+=\s+([-\d.Ee+]+)\s+Ry&quot;</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+</code></pre></div>
+
+<p>完整解析器见 <a href="chapters/12_automation_capstone/scripts/parse_output.py"><code>scripts/parse_output.py</code></a>，支持提取：<br />
+- <strong>总能量</strong>（Ry 和 eV）<br />
+- <strong>原子受力</strong>（force）<br />
+- <strong>应力/压力</strong>（stress）<br />
+- <strong>费米能</strong><br />
+- <strong>收敛状态</strong></p>
+<h3 id="1223">12.2.3 自动化收敛测试</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 核心思路：循环修改参数 → 运行 → 提取能量 → 绘图</span>
+<span class="k">for</span> <span class="n">ecut</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">60</span><span class="p">,</span> <span class="mi">70</span><span class="p">]:</span>
+    <span class="n">write_input</span><span class="p">(</span><span class="n">ecutwfc</span><span class="o">=</span><span class="n">ecut</span><span class="p">)</span>
+    <span class="n">run_pw</span><span class="p">(</span><span class="s2">&quot;scf&quot;</span><span class="p">)</span>
+    <span class="n">energy</span><span class="p">[</span><span class="n">ecut</span><span class="p">]</span> <span class="o">=</span> <span class="n">parse_energy</span><span class="p">()</span>
+</code></pre></div>
+
+<p>运行方式：</p>
+<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>scripts/convergence_test.py<span class="w">           </span><span class="c1"># 完整运行</span>
+python<span class="w"> </span>scripts/convergence_test.py<span class="w"> </span>--dry-run<span class="w"> </span><span class="c1"># 仅生成输入文件</span>
+</code></pre></div>
+
+<h3 id="1224-matplotlib">12.2.4 数据可视化（matplotlib）</h3>
+<p>收敛测试脚本自动绘制两种图：</p>
+<ul>
+<li><strong>绝对能量曲线</strong>：E (Ry) vs ecutwfc，观察能量是否趋于平稳</li>
+<li><strong>相对精度曲线</strong>：ΔE (meV) vs ecutwfc，判断是否达到所需精度</li>
+</ul>
+<p>能带图绘制需配合 QE 的 <code>bands.x</code> 后处理工具提取数据，再用 matplotlib 绑定。</p>
+<hr />
+<h2 id="123">12.3 综合工作流脚本</h2>
+<p><a href="chapters/12_automation_capstone/scripts/run_workflow.sh"><code>scripts/run_workflow.sh</code></a> 将整个流程串联为一个自动化脚本：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 设置 MPI 进程数并运行</span>
+<span class="nv">NP</span><span class="o">=</span><span class="m">8</span><span class="w"> </span>bash<span class="w"> </span>scripts/run_workflow.sh
+</code></pre></div>
+
+<p>脚本按顺序执行：结构优化 → 收敛测试 → SCF → 能带 → 声子，每步自动创建输出目录并记录日志。</p>
+<hr />
+<h2 id="124">12.4 高通量计算简介</h2>
+<p><strong>高通量计算（High-Throughput Computing）</strong> 是对大量材料进行系统化自动计算的范式，核心思想：</p>
+<ol>
+<li><strong>标准化输入</strong>：统一赝势、k 点密度、截断能等参数</li>
+<li><strong>批量生成</strong>：脚本化生成数百至数千个计算任务</li>
+<li><strong>自动提交</strong>：与作业调度系统（SLURM、PBS）集成</li>
+<li><strong>结果收集</strong>：自动解析并存入数据库</li>
+<li><strong>数据分析</strong>：统计筛选、机器学习建模</li>
+</ol>
+<p>典型应用场景：筛选带隙合适的半导体材料、寻找高迁移率载流子材料、合金相图计算等。</p>
+<hr />
+<h2 id="125-ase-atomic-simulation-environment">12.5 ASE (Atomic Simulation Environment)</h2>
+<p><strong>ASE</strong> 是 Python 编写的原子模拟工具包，提供：</p>
+<ul>
+<li><strong>晶体结构构建</strong>：<code>ase.build.bulk("GaAs", "zincblende", a=5.65)</code></li>
+<li><strong>计算器接口</strong>：将 QE 包装为 <code>Espresso</code> 计算器</li>
+<li><strong>结构优化</strong>：内置 BFGS、FIRE 等优化器</li>
+<li><strong>分析工具</strong>：径向分布函数、配位数等</li>
+</ul>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">ase.build</span> <span class="kn">import</span> <span class="n">bulk</span>
+<span class="kn">from</span> <span class="nn">ase.calculators.espresso</span> <span class="kn">import</span> <span class="n">Espresso</span>
+
+<span class="n">atoms</span> <span class="o">=</span> <span class="n">bulk</span><span class="p">(</span><span class="s2">&quot;GaAs&quot;</span><span class="p">,</span> <span class="s2">&quot;zincblende&quot;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mf">5.65</span><span class="p">)</span>
+<span class="n">calc</span> <span class="o">=</span> <span class="n">Espresso</span><span class="p">(</span><span class="n">pseudopotentials</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Ga&quot;</span><span class="p">:</span> <span class="s2">&quot;Ga.pbe-dn.UPF&quot;</span><span class="p">,</span> <span class="s2">&quot;As&quot;</span><span class="p">:</span> <span class="s2">&quot;As.pbe-n.UPF&quot;</span><span class="p">},</span>
+                <span class="n">ecutwfc</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">kpts</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+<span class="n">atoms</span><span class="o">.</span><span class="n">calc</span> <span class="o">=</span> <span class="n">calc</span>
+<span class="n">energy</span> <span class="o">=</span> <span class="n">atoms</span><span class="o">.</span><span class="n">get_potential_energy</span><span class="p">()</span>
+</code></pre></div>
+
+<p>ASE 的优势在于将 QE 计算无缝融入 Python 科学计算生态。</p>
+<hr />
+<h2 id="126-aiida">12.6 AiiDA 工作流引擎</h2>
+<p><strong>AiiDA</strong>（Automated Interactive Infrastructure and Database for Computational Science）是面向计算材料学的<strong>工作流管理框架</strong>，核心功能：</p>
+<ul>
+<li><strong>可重复性</strong>：自动记录完整计算图（provenance graph），从输入到输出全链路可追溯</li>
+<li><strong>工作流编程</strong>：用 Python 定义复杂工作流，支持条件分支、循环、并行</li>
+<li><strong>任务调度</strong>：自动提交到 HPC 集群，失败自动重试</li>
+<li><strong>数据查询</strong>：用 QueryBuilder 在数据库中搜索计算结果</li>
+</ul>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">aiida</span> <span class="kn">import</span> <span class="n">load_profile</span>
+<span class="n">load_profile</span><span class="p">()</span>
+<span class="kn">from</span> <span class="nn">aiida.engine</span> <span class="kn">import</span> <span class="n">run</span>
+<span class="kn">from</span> <span class="nn">aiida_quantumespresso.workflows.pw.relax</span> <span class="kn">import</span> <span class="n">PwRelaxWorkChain</span>
+<span class="c1"># 定义并运行结构优化工作流</span>
+</code></pre></div>
+
+<p>AiiDA 适合需要高可重复性和大规模自动化的研究项目。</p>
+<hr />
+<h2 id="127">12.7 最佳实践与常见陷阱</h2>
+<h3 id="_2">最佳实践</h3>
+<ol>
+<li><strong>先收敛再生产</strong>：永远先做 ecutwfc 和 k 点收敛测试</li>
+<li><strong>检查伪势</strong>：确认赝势覆盖所需电子态（特别是 d 电子）</li>
+<li><strong>逐步验证</strong>：每一步检查输出的合理性，不要盲目提交后续计算</li>
+<li><strong>版本控制</strong>：用 Git 管理输入文件和脚本</li>
+<li><strong>记录日志</strong>：每个计算保存输入、输出和运行脚本</li>
+</ol>
+<h3 id="_3">常见陷阱</h3>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>原因</th>
+<th>解决方案</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>带隙偏小</td>
+<td>LDA/GGA 的系统误差</td>
+<td>使用 HSE06 杂化泛函</td>
+</tr>
+<tr>
+<td>声子出现虚频</td>
+<td>结构未充分优化</td>
+<td>检查力和应力收敛</td>
+</tr>
+<tr>
+<td>计算不收敛</td>
+<td>初始磁矩/电子数不对</td>
+<td>调整 <code>mixing_beta</code>，检查 <code>nbnd</code></td>
+</tr>
+<tr>
+<td>内存不足</td>
+<td>ecutrho 过大</td>
+<td>降低 ecutrho 比值或使用集群</td>
+</tr>
+<tr>
+<td>k 点不足</td>
+<td>金属体系需要更多 k 点</td>
+<td>增加 k 点密度或使用展宽方法</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="128">12.8 学习资源推荐</h2>
+<table>
+<thead>
+<tr>
+<th>资源</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://www.quantum-espresso.org/Doc/INPUT_PW.html">QE 官方文档</a></td>
+<td>pw.x 完整输入参数说明</td>
+</tr>
+<tr>
+<td><a href="https://www.quantum-espresso.org/wiki/">QE Wiki</a></td>
+<td>教程和 FAQ</td>
+</tr>
+<tr>
+<td><a href="https://wiki.fysik.dtu.dk/ase/">ASE 文档</a></td>
+<td>Python 原子模拟工具</td>
+</tr>
+<tr>
+<td><a href="https://aiida.readthedocs.io/">AiiDA 文档</a></td>
+<td>工作流引擎教程</td>
+</tr>
+<tr>
+<td><a href="https://www.materialscloud.org/">Materials Cloud</a></td>
+<td>计算材料数据和工具</td>
+</tr>
+<tr>
+<td><a href="https://materialsproject.org/">Materials Project</a></td>
+<td>高通量材料数据库</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<blockquote>
+<p><strong>本章配套文件：</strong><br />
+- <code>inputs/</code> — GaAs 结构优化、SCF、能带输入文件<br />
+- <a href="chapters/12_automation_capstone/scripts/generate_inputs.py"><code>scripts/generate_inputs.py</code></a> — 输入文件生成器<br />
+- <a href="chapters/12_automation_capstone/scripts/parse_output.py"><code>scripts/parse_output.py</code></a> — 输出解析工具<br />
+- <a href="chapters/12_automation_capstone/scripts/convergence_test.py"><code>scripts/convergence_test.py</code></a> — 收敛测试自动化<br />
+- <a href="chapters/12_automation_capstone/scripts/run_workflow.sh"><code>scripts/run_workflow.sh</code></a> — 完整工作流脚本</p>
+</blockquote>

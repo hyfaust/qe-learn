@@ -1,0 +1,245 @@
+<h1 id="_1">第九章：介电与光谱性质</h1>
+<h2 id="1">1. 介电函数理论基础</h2>
+<p>当电磁波入射到材料上时，材料中的电子会发生极化响应。<strong>介电函数</strong> ε(ω) 描述了这种响应的频率依赖关系，是理解材料光学性质的核心物理量。</p>
+<h3 id="11">1.1 线性响应理论</h3>
+<p>在外加电场 <strong>E</strong> 的作用下，材料产生感应极化 <strong>P</strong>：</p>
+<p>$$P_i = \chi_{ij} E_j$$</p>
+<p>其中 $\chi_{ij}$ 是<strong>电极化率张量</strong>。介电常数张量与极化率的关系为：</p>
+<p>$$\varepsilon_{ij}(\omega) = \delta_{ij} + 4\pi \chi_{ij}(\omega)$$</p>
+<p>对于立方晶系（如 Si、金刚石），介电张量退化为标量：ε = ε_xx = ε_yy = ε_zz。</p>
+<h3 id="12">1.2 静态介电常数</h3>
+<p><strong>静态介电常数</strong> ε₀（ω→0 极限）反映了材料对外加静电场的屏蔽能力：<br />
+- 真空：ε₀ = 1<br />
+- 典型半导体：ε₀ = 10-15（Si: ~12, GaAs: ~13）<br />
+- 典型绝缘体：ε₀ = 3-5（金刚石: ~5.7）</p>
+<blockquote>
+<p><strong>关键概念</strong>：QE 中通过 DFPT（ph.x 设置 <code>epsil=.true.</code>）计算<strong>高频（电子）介电常数</strong> ε∞，它等于静态介电常数中只考虑电子响应的部分（忽略离子贡献）。</p>
+</blockquote>
+<hr />
+<h2 id="2-born">2. Born 有效电荷</h2>
+<p><strong>Born 有效电荷</strong> $Z^*$ 描述了离子位移引起的极化变化：</p>
+<p>$$P_i = \sum_\kappa Z^*_{\kappa,ij}\, u_{\kappa,j}$$</p>
+<p>其中 u_κ,j 是原子 κ 在 j 方向的位移。物理意义：<br />
+- Z<em> 反映了离子位移时电子云的重叠效应<br />
+- 对于离子晶体，Z</em> 通常接近形式电荷<br />
+- 对于共价晶体，Z<em> 可能显著偏离形式电荷<br />
+- </em><em>声子的 LO-TO 分裂</em>*与 Born 电荷直接相关</p>
+<blockquote>
+<p><strong>关键概念</strong>：Born 有效电荷和介电常数共同决定了长程库仑相互作用对声子频率的影响。在极性材料中，LO（纵光学）和 TO（横光学）声子在 Γ 点的频率分裂为：</p>
+</blockquote>
+<p>$$\omega^2_{\text{LO}} = \omega^2_{\text{TO}} + \frac{4\pi}{\varepsilon_\infty} \cdot \frac{(Z^* e)^2}{\mu V}$$</p>
+<hr />
+<h2 id="3-irraman">3. 红外（IR）与拉曼（Raman）光谱</h2>
+<h3 id="31">3.1 红外光谱</h3>
+<p>红外活性判据：声子模式必须引起偶极矩变化，即 Born 有效电荷不为零。IR 强度正比于：</p>
+<p>$$I_{\text{IR}} \propto \left|\sum_\kappa Z^*_\kappa \cdot \mathbf{e}_\kappa(\nu)\right|^2$$</p>
+<p>其中 e_κ(ν) 是模式 ν 中原子 κ 的本征矢量。</p>
+<h3 id="32">3.2 拉曼光谱</h3>
+<p>拉曼活性判据：声子模式必须引起介电极化率变化。拉曼张量由 DFPT 计算：</p>
+<p>$$R_{\alpha\beta} = \frac{\partial \chi_{\alpha\beta}}{\partial u}$$</p>
+<blockquote>
+<p><strong>关键概念</strong>：并非所有声子模式都是 IR 或 Raman 活性的。对称性选择定则决定了哪些模式可以被观测到。例如，在金刚石结构中，Γ 点只有一个三重简并的 T₂g 模式是 Raman 活性的。</p>
+</blockquote>
+<hr />
+<h2 id="4-qe">4. QE 计算流程</h2>
+<h3 id="41-dfpt">4.1 通过 DFPT 计算光学性质</h3>
+<div class="codehilite"><pre><span></span><code>┌─────────────┐    ┌──────────────┐    ┌──────────────┐
+│  pw.x SCF   │ →  │ ph.x Γ 点    │ →  │ dynmat.x     │
+│  (基态)      │    │ epsil=.true. │    │ (IR/Raman)   │
+│              │    │ lraman=.true.│    │              │
+└─────────────┘    └──────────────┘    └──────────────┘
+</code></pre></div>
+
+<h3 id="42-epsilonx">4.2 通过 epsilon.x 计算频率依赖介电函数</h3>
+<div class="codehilite"><pre><span></span><code>┌─────────────┐    ┌──────────────┐    ┌──────────────┐
+│  pw.x SCF   │ →  │ pw.x NSCF    │ →  │ epsilon.x    │
+│  (基态)      │    │ (更多能带)    │    │ (独立粒子)   │
+└─────────────┘    └──────────────┘    └──────────────┘
+</code></pre></div>
+
+<p><strong>注意</strong>：epsilon.x 计算的是独立粒子近似下的介电函数，不包含局域场效应和激子效应。</p>
+<hr />
+<h2 id="5">5. 关键参数详解</h2>
+<h3 id="phx">ph.x 光学性质参数</h3>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>类型</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>epsil</code></td>
+<td>LOGICAL</td>
+<td>.false.</td>
+<td>是否计算介电常数和 Born 有效电荷</td>
+</tr>
+<tr>
+<td><code>lraman</code></td>
+<td>LOGICAL</td>
+<td>.false.</td>
+<td>是否计算非共价拉曼张量</td>
+</tr>
+<tr>
+<td><code>fildyn</code></td>
+<td>CHARACTER</td>
+<td>'matdyn'</td>
+<td>动力学矩阵输出文件名</td>
+</tr>
+<tr>
+<td><code>tr2_ph</code></td>
+<td>REAL</td>
+<td>1.0d-14</td>
+<td>DFPT 收敛阈值</td>
+</tr>
+</tbody>
+</table>
+<h3 id="epsilonx">epsilon.x 参数</h3>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>类型</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>prefix</code></td>
+<td>CHARACTER</td>
+<td>—</td>
+<td>与 pw.x 一致的前缀</td>
+</tr>
+<tr>
+<td><code>outdir</code></td>
+<td>CHARACTER</td>
+<td>—</td>
+<td>临时文件目录</td>
+</tr>
+<tr>
+<td><code>niter</code></td>
+<td>INTEGER</td>
+<td>100</td>
+<td>最大迭代次数</td>
+</tr>
+<tr>
+<td><code>ethr_n</code></td>
+<td>REAL</td>
+<td>1.0d-6</td>
+<td>收敛阈值</td>
+</tr>
+</tbody>
+</table>
+<h3 id="dynmatx">dynmat.x 参数</h3>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>类型</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fildyn</code></td>
+<td>CHARACTER</td>
+<td>—</td>
+<td>输入动力学矩阵文件名</td>
+</tr>
+<tr>
+<td><code>filout</code></td>
+<td>CHARACTER</td>
+<td>'dynmat.out'</td>
+<td>输出本征值/本征矢文件</td>
+</tr>
+<tr>
+<td><code>asr</code></td>
+<td>CHARACTER</td>
+<td>'no'</td>
+<td>声学求和规则（'no', 'simple', 'crystal'）</td>
+</tr>
+<tr>
+<td><code>q(3)</code></td>
+<td>REAL</td>
+<td>0,0,0</td>
+<td>q 点坐标</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6">6. 实操示例</h2>
+<h3 id="61-c-irraman">6.1 金刚石（C）的介电性质和 IR/Raman 光谱</h3>
+<p>详见 <a href="chapters/09_dielectric_spectroscopy/inputs/"><code>inputs/</code></a> 目录中的示例文件：</p>
+<ol>
+<li><a href="chapters/09_dielectric_spectroscopy/inputs/c_scf.in"><code>inputs/c_scf.in</code></a> — SCF 基态计算</li>
+<li><a href="chapters/09_dielectric_spectroscopy/inputs/c_ph_gamma.in"><code>inputs/c_ph_gamma.in</code></a> — Γ 点声子 + 介电常数 + Born 电荷</li>
+<li><a href="chapters/09_dielectric_spectroscopy/inputs/c_dynmat.in"><code>inputs/c_dynmat.in</code></a> — dynmat.x 后处理提取 IR/Raman 强度</li>
+</ol>
+<p>运行流程参见 <a href="chapters/09_dielectric_spectroscopy/scripts/spectroscopy_workflow.sh"><code>scripts/spectroscopy_workflow.sh</code></a>。</p>
+<h3 id="62-si">6.2 Si 的频率依赖介电函数</h3>
+<p>使用 epsilon.x 计算 Si 的光学吸收谱：</p>
+<ol>
+<li><a href="chapters/09_dielectric_spectroscopy/inputs/si_scf.in"><code>inputs/si_scf.in</code></a> — SCF 基态计算</li>
+<li><a href="chapters/09_dielectric_spectroscopy/inputs/si_scf.nscf.in"><code>inputs/si_scf.nscf.in</code></a> — NSCF 计算（更多能带）</li>
+<li><a href="chapters/09_dielectric_spectroscopy/inputs/si_epsilon.in"><code>inputs/si_epsilon.in</code></a> — epsilon.x 计算</li>
+</ol>
+<hr />
+<h2 id="7">7. 注意事项</h2>
+<ol>
+<li>
+<p><strong>绝缘体 vs 金属</strong>：DFPT 计算光学性质仅适用于绝缘体/半导体。金属的光学性质需要不同的方法。</p>
+</li>
+<li>
+<p><strong>收敛性</strong>：介电性质对 k 点和截断能的收敛性要求通常比总能量更高。建议使用比 SCF 更密的 k 网格。</p>
+</li>
+<li>
+<p><strong>LO-TO 分裂</strong>：在极性材料中，ph.x 设置 <code>epsil=.true.</code> 后会自动处理 LO-TO 分裂。需要提供 Born 有效电荷和介电常数。</p>
+</li>
+<li>
+<p><strong>拉曼张量</strong>：<code>lraman=.true.</code> 计算成本较高，因为需要求解额外的 Sternheimer 方程。</p>
+</li>
+<li>
+<p><strong>epsilon.x 的局限</strong>：独立粒子近似会低估带隙，导致吸收边蓝移。更精确的结果需要 GW+BSE 方法。</p>
+</li>
+</ol>
+<hr />
+<h2 id="8">8. 关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>介电函数</strong> ε(ω)</td>
+<td>描述材料对电磁场的频率依赖响应</td>
+</tr>
+<tr>
+<td><strong>Born 有效电荷</strong> Z*</td>
+<td>离子位移引起的极化变化，决定 IR 活性和 LO-TO 分裂</td>
+</tr>
+<tr>
+<td><strong>IR 活性</strong></td>
+<td>声子模式引起偶极矩变化 → 可被红外光谱观测</td>
+</tr>
+<tr>
+<td><strong>Raman 活性</strong></td>
+<td>声子模式引起极化率变化 → 可被拉曼光谱观测</td>
+</tr>
+<tr>
+<td><strong>LO-TO 分裂</strong></td>
+<td>极性材料中 Γ 点纵光学和横光学声子的频率差</td>
+</tr>
+<tr>
+<td><strong>独立粒子近似</strong></td>
+<td>epsilon.x 使用的近似，忽略电子-空穴相互作用</td>
+</tr>
+</tbody>
+</table>

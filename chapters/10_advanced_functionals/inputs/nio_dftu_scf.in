@@ -1,0 +1,53 @@
+#------------------------------------------------------------------------------
+# NiO 反铁磁态 DFT+U 自洽计算
+# 体系：fcc 反铁磁 NiO（岩盐结构）
+# 方法：GGA+U (Dudarev 方案)，nspin=2 自旋极化
+# 参考：QE HP/examples/example02/
+#------------------------------------------------------------------------------
+ &control
+    calculation = 'scf'
+    restart_mode = 'from_scratch'
+    prefix = 'nio_dftu'
+    pseudo_dir   = '/home/faust/qe-7.0/pseudo/'
+    outdir = './tmp/'
+    verbosity = 'high'
+ /
+ &system
+    ibrav = 0
+    celldm(1) = 7.88
+    nat = 4
+    ntyp = 3
+    ecutwfc = 50.0
+    ecutrho = 400.0
+    occupations = 'smearing'
+    smearing = 'gauss'
+    degauss = 0.005
+    nspin = 2
+    starting_magnetization(1) =  0.5
+    starting_magnetization(2) = -0.5
+    lda_plus_u = .true.
+    lda_plus_u_kind = 0
+    U_projection_type = 'ortho-atomic'
+    Hubbard_U(1) = 5.0
+    Hubbard_U(2) = 5.0
+ /
+ &electrons
+    conv_thr = 1.0d-10
+    mixing_beta = 0.3
+    mixing_mode = 'plain'
+ /
+ATOMIC_SPECIES
+ Ni1  58.693  Ni.pz-nd-rrkjus.UPF
+ Ni2  58.693  Ni.pz-nd-rrkjus.UPF
+ O    16.000  O.pz-rrkjus.UPF
+ATOMIC_POSITIONS {alat}
+ Ni1  0.0000000   0.0000000   0.0000000
+ Ni2  0.5000000   0.5000000   0.0000000
+ O    0.5000000   0.0000000   0.0000000
+ O    1.0000000   0.5000000   0.0000000
+CELL_PARAMETERS {alat}
+ 1.0000000  0.5000000  0.5000000
+ 0.5000000  1.0000000  0.5000000
+ 0.5000000  0.5000000  1.0000000
+K_POINTS {automatic}
+ 4 4 4 0 0 0

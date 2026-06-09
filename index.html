@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum ESPRESSO 渐进式教程</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Marked.js for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Highlight.js for code highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/languages/fortran.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/languages/python.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/languages/bash.min.js"></script>
+    <!-- KaTeX for math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">⚛</span>
+                    <h1>QE 教程</h1>
+                </div>
+                <p class="subtitle">Quantum ESPRESSO 渐进式学习</p>
+            </div>
+            <nav class="chapter-nav" id="chapterNav">
+                <!-- Chapters will be loaded dynamically -->
+            </nav>
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="themeToggle" title="切换主题">
+                    <span class="theme-icon">🌙</span>
+                </button>
+                <div class="progress-summary" id="progressSummary">
+                    进度: <span id="progressCount">0</span>/12
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile menu toggle -->
+        <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <span>☰</span>
+        </button>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <!-- Welcome page (default) -->
+            <div class="welcome-page" id="welcomePage">
+                <div class="welcome-hero">
+                    <h1>🔬 Quantum ESPRESSO 渐进式教程</h1>
+                    <p class="welcome-desc">
+                        从零开始学习第一性原理计算，掌握量子 ESPRESSO 的核心功能。
+                        本教程包含 12 个渐进式章节，涵盖 DFT 基础、能带计算、声子分析到高级泛函等主题。
+                    </p>
+                    <div class="difficulty-legend">
+                        <h3>难度等级</h3>
+                        <div class="legend-items">
+                            <span class="legend-item"><span class="stars">⭐</span> 入门</span>
+                            <span class="legend-item"><span class="stars">⭐⭐</span> 基础</span>
+                            <span class="legend-item"><span class="stars">⭐⭐⭐</span> 进阶</span>
+                            <span class="legend-item"><span class="stars">⭐⭐⭐⭐</span> 高级</span>
+                            <span class="legend-item"><span class="stars">⭐⭐⭐⭐⭐</span> 专家</span>
+                        </div>
+                    </div>
+                    <div class="chapter-overview" id="chapterOverview">
+                        <!-- Chapter cards will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chapter content area -->
+            <article class="chapter-content" id="chapterContent" style="display:none;">
+                <div class="chapter-header" id="chapterHeader"></div>
+                <div class="markdown-body" id="markdownBody"></div>
+                <div class="chapter-footer">
+                    <button class="nav-btn prev-btn" id="prevBtn" disabled>← 上一章</button>
+                    <button class="mark-complete-btn" id="markCompleteBtn">✓ 标记为已完成</button>
+                    <button class="nav-btn next-btn" id="nextBtn" disabled>下一章 →</button>
+                </div>
+            </article>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

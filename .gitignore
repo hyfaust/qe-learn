@@ -1,0 +1,26 @@
+# QE output files
+*.out
+*.dat
+*.dat.gnu
+*.dat.rap
+*.pdos_*
+*.projwfc_up
+*.dynG
+*.dynX
+*.axsf
+*.mold
+*.crd
+*.int
+*.path
+*.xyz
+neb.dat
+pw_*.in
+epsi_*.dat
+epsr_*.dat
+ieps_*.dat
+eels_*.dat
+
+# Directories
+tmp/
+__pycache__/
+.qwen/

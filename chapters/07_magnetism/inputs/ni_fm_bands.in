@@ -1,0 +1,36 @@
+ &control
+    calculation = 'bands',
+    restart_mode = 'from_scratch',
+    prefix = 'ni_fm',
+    pseudo_dir   = '/home/faust/qe-7.0/pseudo/',
+    outdir = './tmp/',
+ /
+ &system
+    ibrav = 2,
+    celldm(1) = 6.48,
+    nat = 1,
+    ntyp = 1,
+    ecutwfc = 24.0,
+    ecutrho = 288.0,
+    nspin = 2,
+    starting_magnetization(1) = 0.7,
+    occupations = 'smearing',
+    smearing = 'mv',
+    degauss = 0.02,
+    nbnd = 16,
+ /
+ &electrons
+    conv_thr = 1.0d-8,
+    mixing_beta = 0.3,
+ /
+ATOMIC_SPECIES
+ Ni  58.6934  Ni.pz-nd-rrkjus.UPF
+ATOMIC_POSITIONS alat
+ Ni  0.0  0.0  0.0
+K_POINTS crystal_b
+ 5
+  0.500  0.500  0.500  1   ! L
+  0.000  0.000  0.000  1   ! Gamma
+  0.500  0.000  0.500  1   ! X
+  0.500  0.250  0.750  1   ! W
+  0.375  0.375  0.750  1   ! K

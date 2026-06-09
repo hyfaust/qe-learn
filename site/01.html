@@ -1,0 +1,748 @@
+<h1 id="espresso-dft">第一章：量子 ESPRESSO 入门与 DFT 基础</h1>
+<h2 id="1-dft">1. 什么是密度泛函理论（DFT）</h2>
+<p><strong>密度泛函理论</strong>（Density Functional Theory, DFT）是现代计算材料科学和量子化学的基石。其核心思想是：用<strong>电子密度</strong> ρ(r) 代替多体波函数 Ψ(r₁, r₂, …, rₙ) 作为基本变量，从而将一个 3N 维问题简化为 3 维问题。</p>
+<h3 id="11-hohenberg-kohn">1.1 Hohenberg-Kohn 定理</h3>
+<p>DFT 的理论基础由 Hohenberg 和 Kohn 于 1964 年奠定，包含两个基本定理：</p>
+<ul>
+<li><strong>第一定理（存在性定理）</strong>：外势 v_ext(r) 是基态电子密度 ρ₀(r) 的唯一泛函（相差一个常数）。换言之，体系的所有基态性质都由电子密度唯一确定。</li>
+<li><strong>第二定理（变分原理）</strong>：对于给定的外势，真实基态电子密度使得总能量泛函 E[ρ] 取全局最小值。</li>
+</ul>
+<p>这一定理证明了"密度即一切"，但并未给出能量泛函的具体形式。</p>
+<h3 id="12-kohn-sham">1.2 Kohn-Sham 方程</h3>
+<p>1965 年，Kohn 和 Sham 提出了一个巧妙的方案：引入一组<strong>无相互作用</strong>的辅助粒子，使其密度与真实体系相同。总能量泛函写为：</p>
+<p>$$E[\rho] = T_s[\rho] + E_H[\rho] + E_{\text{ext}}[\rho] + E_{xc}[\rho]$$</p>
+<p>其中：<br />
+- <strong>$T_s[\rho]$</strong>：无相互作用动能<br />
+- <strong>$E_H[\rho]$</strong>：经典 Hartree（库仑）能<br />
+- <strong>$E_{\text{ext}}[\rho]$</strong>：外势能（电子-离子相互作用）<br />
+- <strong>$E_{xc}[\rho]$</strong>：<strong>交换关联能</strong>——所有多体效应都被封装在此</p>
+<p>由此得到的 <strong>Kohn-Sham 方程</strong>为一组自洽的单粒子方程：</p>
+<p>$$\left[-\tfrac{1}{2}\nabla^2 + v_{\text{eff}}(\mathbf{r})\right] \psi_i(\mathbf{r}) = \varepsilon_i \psi_i(\mathbf{r})$$</p>
+<p>其中有效势 $v_{\text{eff}} = v_{\text{ext}} + v_H + v_{xc}$。通过自洽迭代求解这些方程，即可获得体系的基态能量和电子结构。</p>
+<blockquote>
+<p><strong>关键概念</strong>：交换关联泛函 E_xc[ρ] 的精确形式未知，需要近似。常用近似包括 <strong>LDA</strong>（局域密度近似）和 <strong>GGA</strong>（广义梯度近似，如 PBE）。量子 ESPRESSO 支持多种泛函，通过 <code>input_dft</code> 参数选择。</p>
+</blockquote>
+<hr />
+<h2 id="2-espresso">2. 量子 ESPRESSO 软件简介</h2>
+<p><strong>量子 ESPRESSO</strong>（opEn-Source Package for Research in Electronic Structure, Simulation, and Optimisation）是一个开源的、基于平面波赝势方法的第一性原理计算软件包。它是世界上使用最广泛的 DFT 代码之一。</p>
+<h3 id="21">2.1 主要程序</h3>
+<table>
+<thead>
+<tr>
+<th>程序</th>
+<th>可执行文件</th>
+<th>功能说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>pw.x</strong></td>
+<td><code>pw.x</code></td>
+<td>平面波自洽场计算（SCF、NSCF、结构优化、分子动力学等），核心程序</td>
+</tr>
+<tr>
+<td><strong>ph.x</strong></td>
+<td><code>ph.x</code></td>
+<td>密度泛函微扰理论（DFPT）计算声子、介电常数、Born 有效电荷等</td>
+</tr>
+<tr>
+<td><strong>pp.x</strong></td>
+<td><code>pp.x</code></td>
+<td>后处理工具，提取电荷密度、势函数、波函数等并输出可绘图数据</td>
+</tr>
+<tr>
+<td><strong>cp.x</strong></td>
+<td><code>cp.x</code></td>
+<td>Car-Parrinello 分子动力学模拟</td>
+</tr>
+<tr>
+<td><strong>bands.x</strong></td>
+<td><code>bands.x</code></td>
+<td>能带结构后处理，将 NSCF 计算结果转换为绘图数据</td>
+</tr>
+<tr>
+<td><strong>dos.x</strong></td>
+<td><code>dos.x</code></td>
+<td>态密度（DOS）计算</td>
+</tr>
+<tr>
+<td><strong>projwfc.x</strong></td>
+<td><code>projwfc.x</code></td>
+<td>投影到原子轨道的局域态密度（PDOS），分析轨道贡献</td>
+</tr>
+<tr>
+<td><strong>ld1.x</strong></td>
+<td><code>ld1.x</code></td>
+<td>原子代码，生成和测试赝势</td>
+</tr>
+<tr>
+<td><strong>dynmat.x</strong></td>
+<td><code>dynmat.x</code></td>
+<td>声子动力学矩阵对角化，计算声子频率和简正模式</td>
+</tr>
+<tr>
+<td><strong>hp.x</strong></td>
+<td><code>hp.x</code></td>
+<td>DFT+U 方法中 Hubbard U 参数的线性响应计算</td>
+</tr>
+</tbody>
+</table>
+<h3 id="22-qe-qe-70">2.2 QE 源代码目录结构（<code>~/qe-7.0/</code>）</h3>
+<table>
+<thead>
+<tr>
+<th>目录</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PW/</code></td>
+<td>平面波 DFT 计算核心代码（pw.x 的源代码）</td>
+</tr>
+<tr>
+<td><code>PHonon/</code></td>
+<td>声子计算代码（ph.x、dynmat.x 等）</td>
+</tr>
+<tr>
+<td><code>PP/</code></td>
+<td>后处理工具代码（pp.x、bands.x、dos.x、projwfc.x 等）</td>
+</tr>
+<tr>
+<td><code>CPV/</code></td>
+<td>Car-Parrinello 分子动力学代码（cp.x）</td>
+</tr>
+<tr>
+<td><code>Modules/</code></td>
+<td>共享模块，包含通用数据结构、I/O、并行工具等</td>
+</tr>
+<tr>
+<td><code>FFTXlib/</code></td>
+<td>FFT 库，负责实空间与倒空间的快速傅里叶变换</td>
+</tr>
+<tr>
+<td><code>LAXlib/</code></td>
+<td>线性代数库，矩阵对角化等</td>
+</tr>
+<tr>
+<td><code>XClib/</code></td>
+<td>交换关联泛函库</td>
+</tr>
+<tr>
+<td><code>KS_Solvers/</code></td>
+<td>Kohn-Sham 方程求解器（Davidson、CG 等算法）</td>
+</tr>
+<tr>
+<td><code>atomic/</code></td>
+<td>原子代码（ld1.x），用于生成赝势</td>
+</tr>
+<tr>
+<td><code>NEB/</code></td>
+<td>过渡态搜索（Nudged Elastic Band 方法）</td>
+</tr>
+<tr>
+<td><code>EPW/</code></td>
+<td>电子-声子耦合与输运性质计算</td>
+</tr>
+<tr>
+<td><code>HP/</code></td>
+<td>Hubbard 参数计算</td>
+</tr>
+<tr>
+<td><code>TDDFPT/</code></td>
+<td>含时密度泛函理论（光学性质）</td>
+</tr>
+<tr>
+<td><code>pseudo/</code></td>
+<td>内置赝势文件库</td>
+</tr>
+<tr>
+<td><code>GUI/</code></td>
+<td>图形用户界面相关</td>
+</tr>
+<tr>
+<td><code>Doc/</code></td>
+<td>文档与示例</td>
+</tr>
+<tr>
+<td><code>install/</code></td>
+<td>编译安装脚本</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3">3. 输入文件结构详解</h2>
+<p>量子 ESPRESSO 的输入文件（以 pw.x 为例）由 <strong>Namelist</strong> 和 <strong>Card</strong> 两部分组成，采用 Fortran 自由格式。</p>
+<h3 id="31">3.1 基本结构</h3>
+<div class="codehilite"><pre><span></span><code>&amp;CONTROL
+  ...
+/
+&amp;SYSTEM
+  ...
+/
+&amp;ELECTRONS
+  ...
+/
+
+ATOMIC_SPECIES
+...
+ATOMIC_POSITIONS
+...
+K_POINTS
+...
+</code></pre></div>
+
+<h3 id="32-namelist">3.2 Namelist 详解</h3>
+<h4 id="control">&amp;CONTROL — 控制参数</h4>
+<p>控制计算类型、输入输出行为等。</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>类型</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>calculation</code></td>
+<td>字符串</td>
+<td><code>'scf'</code></td>
+<td>计算类型：<code>'scf'</code>（自洽场）、<code>'nscf'</code>（非自洽）、<code>'bands'</code>（能带）、<code>'relax'</code>（离子弛豫）、<code>'vc-relax'</code>（可变晶格弛豫）、<code>'md'</code>（分子动力学）</td>
+</tr>
+<tr>
+<td><code>prefix</code></td>
+<td>字符串</td>
+<td><code>'pwscf'</code></td>
+<td>输出文件前缀，所有输出文件以此前缀命名</td>
+</tr>
+<tr>
+<td><code>outdir</code></td>
+<td>字符串</td>
+<td><code>'./'</code></td>
+<td>临时文件（波函数、电荷密度等）存放目录</td>
+</tr>
+<tr>
+<td><code>pseudo_dir</code></td>
+<td>字符串</td>
+<td><code>'./'</code></td>
+<td>赝势文件搜索目录</td>
+</tr>
+<tr>
+<td><code>verbosity</code></td>
+<td>字符串</td>
+<td><code>'default'</code></td>
+<td>输出详细程度：<code>'low'</code>、<code>'default'</code>、<code>'high'</code></td>
+</tr>
+<tr>
+<td><code>tprnfor</code></td>
+<td>逻辑</td>
+<td><code>.FALSE.</code></td>
+<td>是否打印原子受力</td>
+</tr>
+<tr>
+<td><code>tstress</code></td>
+<td>逻辑</td>
+<td><code>.FALSE.</code></td>
+<td>是否计算并打印应力张量</td>
+</tr>
+<tr>
+<td><code>disk_io</code></td>
+<td>字符串</td>
+<td><code>'default'</code></td>
+<td>磁盘 I/O 级别：<code>'none'</code>、<code>'low'</code>、<code>'default'</code>、<code>'high'</code></td>
+</tr>
+<tr>
+<td><code>restart_mode</code></td>
+<td>字符串</td>
+<td><code>'from_scratch'</code></td>
+<td>重启模式：<code>'from_scratch'</code>（从头算）、<code>'restart'</code>（从上次中断处继续）</td>
+</tr>
+<tr>
+<td><code>wf_collect</code></td>
+<td>逻辑</td>
+<td><code>.FALSE.</code></td>
+<td>是否将所有 k 点的波函数收集到一个文件中</td>
+</tr>
+<tr>
+<td><code>nstep</code></td>
+<td>整数</td>
+<td><code>1</code></td>
+<td>SCF 迭代最大步数（relax/md 时为离子步数）</td>
+</tr>
+<tr>
+<td><code>etot_conv_thr</code></td>
+<td>实数</td>
+<td><code>1.0e-4</code></td>
+<td>总能量收敛阈值（Rydberg）</td>
+</tr>
+<tr>
+<td><code>forc_conv_thr</code></td>
+<td>实数</td>
+<td><code>1.0e-3</code></td>
+<td>力收敛阈值（Rydberg/Bohr），用于 relax</td>
+</tr>
+<tr>
+<td><code>dt</code></td>
+<td>实数</td>
+<td><code>20.D0</code></td>
+<td>CP 分子动力学时间步长（a.u.）</td>
+</tr>
+</tbody>
+</table>
+<h4 id="system">&amp;SYSTEM — 体系参数</h4>
+<p>定义晶体结构、电子数、截断能等物理参数。</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>类型</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ibrav</code></td>
+<td>整数</td>
+<td><code>0</code></td>
+<td>Bravais 格子类型编号（0 表示手动指定 <code>CELL_PARAMETERS</code>；1=fcc, 2=bcc, 3=sc, 4=hex, 等）</td>
+</tr>
+<tr>
+<td><code>nat</code></td>
+<td>整数</td>
+<td>—</td>
+<td><strong>必须指定</strong>：体系中原子总数</td>
+</tr>
+<tr>
+<td><code>ntyp</code></td>
+<td>整数</td>
+<td>—</td>
+<td><strong>必须指定</strong>：不同原子种类数</td>
+</tr>
+<tr>
+<td><code>ecutwfc</code></td>
+<td>实数</td>
+<td>—</td>
+<td><strong>必须指定</strong>：波函数平面波截断能（单位：Ry）</td>
+</tr>
+<tr>
+<td><code>ecutrho</code></td>
+<td>实数</td>
+<td><code>4*ecutwfc</code></td>
+<td>电荷密度截断能（Ry），对于超软赝势/PAW 需手动增大</td>
+</tr>
+<tr>
+<td><code>a</code> / <code>b</code> / <code>c</code></td>
+<td>实数</td>
+<td>—</td>
+<td>晶格参数（单位：Bohr，可配合 <code>celldm(1)</code> 等）</td>
+</tr>
+<tr>
+<td><code>celldm(i)</code></td>
+<td>实数</td>
+<td>—</td>
+<td>晶格参数的无量纲形式，<code>celldm(1)</code> = a（Bohr）</td>
+</tr>
+<tr>
+<td><code>occupations</code></td>
+<td>字符串</td>
+<td><code>'fixed'</code></td>
+<td>占据数方案：<code>'fixed'</code>（绝缘体）、<code>'smearing'</code>（金属）</td>
+</tr>
+<tr>
+<td><code>smearing</code></td>
+<td>字符串</td>
+<td><code>'gaussian'</code></td>
+<td>展宽方法：<code>'gaussian'</code>、<code>'methfessel-paxton'</code>、<code>'marzari-vanderbilt'</code>、<code>'fermi-dirac'</code></td>
+</tr>
+<tr>
+<td><code>degauss</code></td>
+<td>实数</td>
+<td><code>0.01</code></td>
+<td>展宽宽度（Ry），金属体系通常 0.01–0.05</td>
+</tr>
+<tr>
+<td><code>input_dft</code></td>
+<td>字符串</td>
+<td>(自动)</td>
+<td>指定交换关联泛函，如 <code>'PBE'</code>、<code>'LDA'</code>、<code>'BLYP'</code> 等</td>
+</tr>
+<tr>
+<td><code>nspin</code></td>
+<td>整数</td>
+<td><code>1</code></td>
+<td>自旋极化：1=非极化，2=共线自旋极化</td>
+</tr>
+<tr>
+<td><code>nbnd</code></td>
+<td>整数</td>
+<td>(自动)</td>
+<td>能带数，默认为价电子数/2 + 额外空带</td>
+</tr>
+<tr>
+<td><code>tot_charge</code></td>
+<td>实数</td>
+<td><code>0.0</code></td>
+<td>体系总电荷（正值=失去电子）</td>
+</tr>
+<tr>
+<td><code>lda_plus_u</code></td>
+<td>逻辑</td>
+<td><code>.FALSE.</code></td>
+<td>是否启用 DFT+U</td>
+</tr>
+<tr>
+<td><code>lda_plus_u_kind</code></td>
+<td>整数</td>
+<td><code>0</code></td>
+<td>DFT+U 类型：0=简化旋转不变，1=完整旋转不变</td>
+</tr>
+<tr>
+<td><code>Hubbard_U(i)</code></td>
+<td>实数</td>
+<td><code>0.D0</code></td>
+<td>第 i 种原子的 U 值（eV）</td>
+</tr>
+<tr>
+<td><code>nosym</code></td>
+<td>逻辑</td>
+<td><code>.FALSE.</code></td>
+<td>是否禁用对称性</td>
+</tr>
+<tr>
+<td><code>nosym_evc</code></td>
+<td>逻辑</td>
+<td><code>.FALSE.</code></td>
+<td>是否禁用对称性（同时影响电荷密度和波函数）</td>
+</tr>
+<tr>
+<td><code>london</code></td>
+<td>逻辑</td>
+<td><code>.FALSE.</code></td>
+<td>是否启用 DFT-D2 色散修正</td>
+</tr>
+<tr>
+<td><code>vdw_corr</code></td>
+<td>字符串</td>
+<td><code>'none'</code></td>
+<td>范德华修正：<code>'DFT-D'</code>、<code>'TS'</code>、<code>'XDM'</code> 等</td>
+</tr>
+<tr>
+<td><code>ecfixed</code></td>
+<td>实数</td>
+<td>—</td>
+<td>固定截断能（用于 <code>ecutrho</code> 控制）</td>
+</tr>
+<tr>
+<td><code>qcutz</code></td>
+<td>实数</td>
+<td>—</td>
+<td>增压能量（Gaussian 固定）</td>
+</tr>
+<tr>
+<td><code>q2sigma</code></td>
+<td>实数</td>
+<td>—</td>
+<td>高斯展宽宽度</td>
+</tr>
+</tbody>
+</table>
+<h4 id="electrons">&amp;ELECTRONS — 电子自洽参数</h4>
+<p>控制电子步迭代的收敛行为。</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>类型</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>electron_maxstep</code></td>
+<td>整数</td>
+<td><code>100</code></td>
+<td>电子自洽迭代最大步数</td>
+</tr>
+<tr>
+<td><code>conv_thr</code></td>
+<td>实数</td>
+<td><code>1.0e-6</code></td>
+<td>电子步能量收敛阈值（Rydberg）</td>
+</tr>
+<tr>
+<td><code>mixing_mode</code></td>
+<td>字符串</td>
+<td><code>'plain'</code></td>
+<td>电荷密度混合方式：<code>'plain'</code>、<code>'TF'</code>（Thomas-Fermi）、<code>'local-TF'</code></td>
+</tr>
+<tr>
+<td><code>mixing_beta</code></td>
+<td>实数</td>
+<td><code>0.7</code></td>
+<td>密度混合参数 β（0 &lt; β ≤ 1），较大值收敛快但可能不稳定</td>
+</tr>
+<tr>
+<td><code>mixing_ndim</code></td>
+<td>整数</td>
+<td><code>8</code></td>
+<td>密度混合的历史向量数</td>
+</tr>
+<tr>
+<td><code>diagonalization</code></td>
+<td>字符串</td>
+<td><code>'david'</code></td>
+<td>对角化算法：<code>'david'</code>（Davidson）、<code>'cg'</code>（共轭梯度）</td>
+</tr>
+<tr>
+<td><code>diago_thr_init</code></td>
+<td>实数</td>
+<td>—</td>
+<td>初始对角化阈值</td>
+</tr>
+<tr>
+<td><code>electron_maxstep</code></td>
+<td>整数</td>
+<td><code>100</code></td>
+<td>SCF 迭代最大步数</td>
+</tr>
+<tr>
+<td><code>startingwfc</code></td>
+<td>字符串</td>
+<td><code>'atomic+random'</code></td>
+<td>初始波函数：<code>'atomic'</code>、<code>'atomic+random'</code>、<code>'random'</code>、<code>'file'</code></td>
+</tr>
+<tr>
+<td><code>startingpot</code></td>
+<td>字符串</td>
+<td><code>'atomic'</code></td>
+<td>初始势：<code>'atomic'</code>、<code>'file'</code></td>
+</tr>
+<tr>
+<td><code>scf_must_converge</code></td>
+<td>逻辑</td>
+<td><code>.TRUE.</code></td>
+<td>SCF 不收敛时是否停止计算</td>
+</tr>
+<tr>
+<td><code>ortho_para</code></td>
+<td>整数</td>
+<td>—</td>
+<td>正交化并行参数</td>
+</tr>
+</tbody>
+</table>
+<h3 id="33-card">3.3 Card 详解</h3>
+<p>Card 部分不使用 <code>&amp;</code>/<code>/</code> 界定，以关键词开头，后跟数据行。</p>
+<h4 id="atomic_species">ATOMIC_SPECIES — 原子种类</h4>
+<p>定义每种原子的标签、质量和赝势文件名。</p>
+<div class="codehilite"><pre><span></span><code>ATOMIC_SPECIES
+  Si  28.086  Si.pbe-n-rrkjus_psl.1.0.0.UPF
+</code></pre></div>
+
+<p>格式：<code>标签  质量(amu)  赝势文件名</code></p>
+<ul>
+<li><strong>质量</strong>：用于分子动力学和声子计算中的离子运动；SCF 中影响不大但不可省略</li>
+<li><strong>赝势文件</strong>：路径相对于 <code>pseudo_dir</code>；常见格式为 <code>.UPF</code>（Unified Pseudopotential Format）</li>
+</ul>
+<h4 id="atomic_positions">ATOMIC_POSITIONS — 原子坐标</h4>
+<div class="codehilite"><pre><span></span><code>ATOMIC_POSITIONS {crystal}
+  Si   0.00  0.00  0.00
+  Si   0.25  0.25  0.25
+</code></pre></div>
+
+<p>坐标选项：</p>
+<table>
+<thead>
+<tr>
+<th>单位</th>
+<th>关键词</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>晶体坐标</td>
+<td><code>crystal</code></td>
+<td>以晶格矢量为基，值域 [0, 1)，<strong>最常用</strong></td>
+</tr>
+<tr>
+<td>笛卡尔坐标（alat）</td>
+<td><code>alat</code> 或 省略</td>
+<td>以 <code>celldm(1)</code> 或 <code>a</code> 为单位</td>
+</tr>
+<tr>
+<td>笛卡尔坐标（Bohr）</td>
+<td><code>bohr</code></td>
+<td>以 Bohr 原子单位</td>
+</tr>
+<tr>
+<td>笛卡尔坐标（Angstrom）</td>
+<td><code>angstrom</code></td>
+<td>以埃为单位</td>
+</tr>
+</tbody>
+</table>
+<p>可以给单个原子添加约束（用于结构优化）：</p>
+<div class="codehilite"><pre><span></span><code>ATOMIC_POSITIONS {crystal}
+  Si   0.00  0.00  0.00  0  0  0    ! 固定此原子
+  Si   0.25  0.25  0.25              ! 允许自由移动
+</code></pre></div>
+
+<h4 id="k_points-k">K_POINTS — k 点采样</h4>
+<p>定义布里渊区中的 k 点网格或路径。</p>
+<p><strong>自动网格</strong>（用于 SCF/NSCF）：</p>
+<div class="codehilite"><pre><span></span><code>K_POINTS {automatic}
+  4  4  4  0  0  0
+</code></pre></div>
+
+<p>格式：<code>nk1 nk2 nk3 sk1 sk2 sk3</code>，其中 <code>sk</code> 为位移（0=Gamma 中心，1=Monkhorst-Pack）。</p>
+<p><strong>手动列表</strong>（用于能带）：</p>
+<div class="codehilite"><pre><span></span><code>K_POINTS {crystal_b}
+  5
+  0.000  0.000  0.000  20   ! Γ
+  0.500  0.500  0.000  20   ! X
+  0.375  0.375  0.750  20   ! K
+  0.000  0.000  0.000  20   ! Γ
+  0.500  0.500  0.500  20   ! L
+</code></pre></div>
+
+<h4 id="cell_parameters">CELL_PARAMETERS — 晶格矢量</h4>
+<p>当 <code>ibrav = 0</code> 时必须提供：</p>
+<div class="codehilite"><pre><span></span><code>CELL_PARAMETERS {angstrom}
+  5.43  0.00  0.00
+  0.00  5.43  0.00
+  0.00  0.00  5.43
+</code></pre></div>
+
+<hr />
+<h2 id="4">4. 单位系统</h2>
+<p>量子 ESPRESSO 使用 <strong>Rydberg 原子单位制</strong>（Rydberg Atomic Units），这是初学者最容易混淆的地方之一。</p>
+<table>
+<thead>
+<tr>
+<th>物理量</th>
+<th>单位</th>
+<th>与 SI 的换算</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>能量</td>
+<td>Ry（Rydberg）</td>
+<td>1 Ry = 13.605693 eV</td>
+</tr>
+<tr>
+<td>长度</td>
+<td>Bohr（a.u.）</td>
+<td>1 Bohr = 0.529177 Å</td>
+</tr>
+<tr>
+<td>力</td>
+<td>Ry/Bohr</td>
+<td>1 Ry/Bohr ≈ 25.711 eV/Å</td>
+</tr>
+<tr>
+<td>压力</td>
+<td>kbar</td>
+<td>1 kbar = 0.1 GPa</td>
+</tr>
+<tr>
+<td>磁场</td>
+<td>Tesla</td>
+<td>—</td>
+</tr>
+<tr>
+<td>温度</td>
+<td>Kelvin</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>注意</strong>：虽然输入中可以用 <code>angstrom</code> 指定原子坐标和晶格参数，但输出文件中的能量始终以 <strong>Rydberg</strong> 为单位。如果需要转换为 eV，乘以 13.6057。</p>
+</blockquote>
+<hr />
+<h2 id="5">5. 输出文件解读</h2>
+<p>运行 <code>pw.x</code> 后，输出包含以下几个部分：</p>
+<h3 id="51-stdout">5.1 标准输出（stdout）</h3>
+<p>通常重定向到 <code>.out</code> 文件，包含完整的计算日志：</p>
+<div class="codehilite"><pre><span></span><code><span class="w">     </span><span class="nx">Program</span><span class="w"> </span><span class="nx">PWSCF</span><span class="w"> </span><span class="nx">v</span><span class="m m-Double">.7.0</span><span class="w"> </span><span class="nx">starts</span><span class="w"> </span><span class="nx">on</span><span class="w"> </span><span class="o">...</span>
+<span class="w">     </span><span class="o">...</span><span class="w"> </span><span class="nx">reading</span><span class="w"> </span><span class="nx">namelist</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">CONTROL</span>
+<span class="w">     </span><span class="o">...</span><span class="w"> </span><span class="nx">reading</span><span class="w"> </span><span class="nx">namelist</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">SYSTEM</span>
+<span class="w">     </span><span class="o">...</span>
+<span class="w">     </span><span class="nx">number</span><span class="w"> </span><span class="nx">of</span><span class="w"> </span><span class="nx">atoms</span><span class="o">/</span><span class="nx">cell</span><span class="w">      </span><span class="p">=</span><span class="w">            </span><span class="mi">2</span>
+<span class="w">     </span><span class="nx">number</span><span class="w"> </span><span class="nx">of</span><span class="w"> </span><span class="nx">atomic</span><span class="w"> </span><span class="nx">types</span><span class="w">    </span><span class="p">=</span><span class="w">            </span><span class="mi">1</span>
+<span class="w">     </span><span class="o">...</span>
+<span class="w">     </span><span class="nx">kinetic</span><span class="o">-</span><span class="nx">energy</span><span class="w"> </span><span class="nx">cutoff</span><span class="w">     </span><span class="p">=</span><span class="w">      </span><span class="m m-Double">30.0000</span><span class="w">  </span><span class="nx">Ry</span>
+<span class="w">     </span><span class="nx">charge</span><span class="w"> </span><span class="nx">density</span><span class="w"> </span><span class="nx">cutoff</span><span class="w">     </span><span class="p">=</span><span class="w">     </span><span class="m m-Double">240.0000</span><span class="w">  </span><span class="nx">Ry</span>
+<span class="w">     </span><span class="o">...</span>
+<span class="w">     </span><span class="k">Self</span><span class="o">-</span><span class="nx">Consistent</span><span class="w"> </span><span class="nx">Calculation</span>
+<span class="w">     </span><span class="nx">iteration</span><span class="w"> </span><span class="err">#</span><span class="w">  </span><span class="mi">1</span><span class="w">     </span><span class="nx">ecut</span><span class="p">=</span><span class="w">  </span><span class="m m-Double">30.00</span><span class="w"> </span><span class="nx">Ry</span><span class="w">     </span><span class="nx">beta</span><span class="p">=</span><span class="w"> </span><span class="m m-Double">0.70</span>
+<span class="w">     </span><span class="o">...</span>
+<span class="w">     </span><span class="nx">convergence</span><span class="w"> </span><span class="nx">has</span><span class="w"> </span><span class="nx">been</span><span class="w"> </span><span class="nx">achieved</span><span class="w"> </span><span class="k">in</span><span class="w">   </span><span class="mi">8</span><span class="w"> </span><span class="nx">iterations</span>
+</code></pre></div>
+
+<h3 id="52">5.2 关键输出信息</h3>
+<ul>
+<li><strong>总能量</strong>：<code>!    total energy              =  -xxx.xxxx xxxx Ry</code></li>
+<li><strong>费米能</strong>：<code>the Fermi energy is    x.xxxx ev</code></li>
+<li><strong>原子受力</strong>：<code>Total force =     x.xxxx</code>（relax 时重要）</li>
+<li><strong>应力张量</strong>：<code>total   stress  (Ry/bohr**3)</code>（vc-relax 时重要）</li>
+</ul>
+<h3 id="53-outdirprefix">5.3 临时文件（<code>outdir/prefix.*</code>）</h3>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>prefix.save/</code></td>
+<td>保存目录，含电荷密度、波函数等</td>
+</tr>
+<tr>
+<td><code>prefix.wfc*</code></td>
+<td>波函数文件</td>
+</tr>
+<tr>
+<td><code>prefix.xml</code></td>
+<td>结构与计算参数的 XML 文件</td>
+</tr>
+<tr>
+<td><code>prefix.EXIT</code></td>
+<td>存在此文件则程序优雅退出</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6">6. 关键概念</h2>
+<ul>
+<li><strong>自洽场（SCF）</strong>：Kohn-Sham 方程必须自洽求解——由猜测的电荷密度出发，构造有效势，求解 KS 方程得到波函数，再由波函数计算新密度，如此迭代直到收敛。收敛判据通常为总能量变化小于 <code>conv_thr</code>。</li>
+<li><strong>平面波基组</strong>：QE 用平面波展开波函数。<code>ecutwfc</code> 控制基组大小——截断能越高，基组越大，结果越精确但计算越慢。需要进行 <strong>截断能收敛测试</strong>。</li>
+<li><strong>赝势（Pseudopotential）</strong>：用赝势代替全电子势来处理内层电子，大幅减少计算量。QE 支持 <strong>NCPP</strong>（范数守恒赝势）、<strong>USPP</strong>（超软赝势）和 <strong>PAW</strong>（投影缀加波）。超软赝势需要更大的 <code>ecutrho</code>。</li>
+<li><strong>k 点采样</strong>：对于周期性体系，需要在布里渊区中离散采样。k 点越多越精确，但计算量线性增长。需要进行 <strong>k 点收敛测试</strong>。</li>
+<li><strong>Rydberg 原子单位</strong>：QE 内部使用 Rydberg 单位（1 Ry = 13.6057 eV），初学者务必注意与 eV 的换算。</li>
+<li><strong>对称性</strong>：QE 自动检测晶体空间群对称性以减少 k 点数和计算量。使用 <code>nosym = .TRUE.</code> 可禁用（调试时有用）。</li>
+<li><strong>交换关联泛函</strong>：DFT 中唯一需要近似的部分。LDA 适用于简单金属和半导体；PBE（GGA）是通用性最广的选择；对于弱相互作用需添加色散修正（DFT-D3, MBD 等）。</li>
+</ul>
+<hr />
+<h2 id="7-scf">7. 动手实践：硅晶体的 SCF 计算</h2>
+<p>请参考本章的输入文件示例和运行脚本：</p>
+<ul>
+<li><strong>输入文件</strong>：<a href="chapters/01_qe_basics/inputs/si_scf.in"><code>inputs/si_scf.in</code></a> — 完整的 Si SCF 计算输入，带详细中文注释</li>
+<li><strong>运行脚本</strong>：<a href="chapters/01_qe_basics/scripts/run.sh"><code>scripts/run.sh</code></a> — 使用 pw.x 运行计算的 bash 脚本</li>
+</ul>
+<hr />
+<h2 id="_1">参考资料</h2>
+<ul>
+<li><a href="https://www.quantum-espresso.org/Doc/INPUT_PW.html">Quantum ESPRESSO 官方文档</a></li>
+<li>P. Giannozzi et al., <em>J. Phys.: Condens. Matter</em> <strong>21</strong>, 395502 (2009)</li>
+<li>R. M. Martin, <em>Electronic Structure: Basic Theory and Practical Methods</em>, Cambridge University Press</li>
+<li>D. Sholl &amp; J. Steckel, <em>Density Functional Theory: A Practical Introduction</em>, Wiley</li>
+</ul>

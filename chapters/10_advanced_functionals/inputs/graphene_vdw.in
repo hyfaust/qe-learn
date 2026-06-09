@@ -1,0 +1,48 @@
+#------------------------------------------------------------------------------
+# 石墨烯（石墨）vdW-D3 色散修正 — 层间距优化
+# 方法：PBE + DFT-D3(BJ)，仅优化 c 轴（层间距方向）
+# 参考：QE PW/examples/dftd3_example/
+#------------------------------------------------------------------------------
+&control
+    calculation = 'vc-relax'
+    restart_mode = 'from_scratch'
+    prefix = 'graphite_d3'
+    pseudo_dir   = '/home/faust/qe-7.0/pseudo/'
+    outdir = './tmp/'
+    tstress = .true.
+    tprnfor = .true.
+ /
+ &system
+    ibrav = 4
+    celldm(1) = 4.66
+    celldm(3) = 2.7264
+    nat = 4
+    ntyp = 1
+    ecutwfc = 37.0
+    ecutrho = 318.0
+    occupations = 'fixed'
+    smearing = 'mv'
+    degauss = 0.02
+    vdw_corr = 'dft-d3'
+ /
+ &electrons
+    conv_thr = 1.0d-8
+ /
+ &ions
+    ion_dynamics = 'bfgs'
+ /
+ &cell
+    cell_dynamics = 'bfgs'
+    press_conv_thr = 0.5
+    press = 0.0
+    cell_dofree = 'z'
+ /
+ATOMIC_SPECIES
+ C  12.011  C.pbe-n-rrkjus_psl.0.1.UPF
+ATOMIC_POSITIONS {alat}
+ C  0.0000000  1.0000000  0.7500000
+ C  0.6666700  0.3333300  0.7500000
+ C  0.0000000  1.0000000  0.2500000
+ C  0.3333300  0.6666700  0.2500000
+K_POINTS {automatic}
+ 3 3 3 1 1 1

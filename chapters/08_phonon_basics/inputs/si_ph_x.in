@@ -1,0 +1,9 @@
+Si phonon at X point
+&inputph
+    tr2_ph = 1.0d-14,
+    prefix = 'silicon',
+    amass(1) = 28.08,
+    outdir = './tmp/',
+    fildyn = 'si.dynX',
+/
+1.0  0.0  0.0

@@ -1,0 +1,48 @@
+&CONTROL
+  calculation   = 'md'
+  restart_mode  = 'from_scratch'
+  pseudo_dir   = '/home/faust/qe-7.0/pseudo/'
+  outdir        = './tmp/'
+  prefix        = 'h2o_md'
+  dt            = 20.D0
+  nstep         = 2
+  disk_io       = 'low'
+  tstress       = .FALSE.
+  tprnfor       = .TRUE.
+/
+
+&SYSTEM
+  ibrav     = 1
+  celldm(1) = 15.0
+  nat       = 3
+  ntyp      = 2
+  ecutwfc   = 40.0
+  ecutrho   = 320.0
+  nr1b      = 40
+  nr2b      = 40
+  nr3b      = 40
+  nosym     = .TRUE.
+/
+
+&ELECTRONS
+  conv_thr    = 1.D-8
+  mixing_beta = 0.7
+  electron_dynamics = 'cg'
+/
+
+&IONS
+  pot_extrapolation = 'second-order'
+  wfc_extrapolation = 'second-order'
+  ion_temperature   = 'not_controlled'
+/
+
+ATOMIC_SPECIES
+ O  15.999  O.pbe-van_ak.UPF
+ H   1.008  H.pbe-van_ak.UPF
+
+ATOMIC_POSITIONS { angstrom }
+ O   0.000000   0.000000   0.117369
+ H   0.000000   0.756950  -0.469476
+ H   0.000000  -0.756950  -0.469476
+
+K_POINTS { gamma }

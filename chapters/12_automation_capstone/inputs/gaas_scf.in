@@ -1,0 +1,33 @@
+&CONTROL
+  calculation  = 'scf'
+  prefix       = 'sic'
+  outdir       = './tmp'
+  pseudo_dir   = '/home/faust/qe-7.0/pseudo/'
+  restart_mode = 'from_scratch'
+/
+
+&SYSTEM
+  ibrav     = 2
+  celldm(1) = 8.24           ! SiC 晶格参数 (Bohr) ≈ 4.36 Å
+  nat       = 2
+  ntyp      = 2
+  ecutwfc   = 30.0
+  occupations = 'fixed'       ! SiC 是半导体/绝缘体
+/
+
+&ELECTRONS
+  conv_thr    = 1.0d-8
+  mixing_beta = 0.7
+  electron_maxstep = 200
+/
+
+ATOMIC_SPECIES
+ Si  28.086  Si.pz-vbc.UPF
+ C   12.011  C.pz-rrkjus.UPF
+
+ATOMIC_POSITIONS crystal
+ Si  0.00  0.00  0.00
+ C   0.25  0.25  0.25
+
+K_POINTS automatic
+ 4 4 4 0 0 0

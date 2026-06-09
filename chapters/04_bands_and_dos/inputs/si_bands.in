@@ -1,0 +1,32 @@
+&control
+    calculation  = 'bands'
+    restart_mode = 'from_scratch'
+    prefix       = 'silicon'
+    pseudo_dir   = '/home/faust/qe-7.0/pseudo/'
+    outdir       = './tmp/'
+/
+&system
+    ibrav    = 2
+    celldm(1)= 10.20
+    nat      = 2
+    ntyp     = 1
+    ecutwfc  = 18.0
+    nbnd     = 8
+/
+&electrons
+    diagonalization = 'david'
+/
+ATOMIC_SPECIES
+  Si  28.086  Si.pz-vbc.UPF
+
+ATOMIC_POSITIONS alat
+  Si  0.00  0.00  0.00
+  Si  0.25  0.25  0.25
+
+K_POINTS tpiba_b
+  5
+  0.5000  0.5000  0.5000  30   ! L
+  0.0000  0.0000  0.0000  30   ! Gamma
+  1.0000  0.0000  0.0000  30   ! X
+  1.0000  0.2500  0.2500  30   ! W (= K*0.5 + ...) 见说明
+  0.7500  0.7500  0.0000   1   ! K (末点权重无意义)
